@@ -64,13 +64,16 @@ class KeycapPreview {
         // 初始化操作按钮
         document.getElementById('resetBtn').addEventListener('click', () => this.resetColors());
         document.getElementById('exportBtn').addEventListener('click', () => this.exportImage());
-        document.getElementById('generateNoteBtn').addEventListener('click', () => this.openNoteModal());
+        document.getElementById('generateNoteBtn').addEventListener('click', () => this.generateAndCopyNote());
 
         // 初始化色卡选择器
         this.initColorCardPicker();
 
         // 初始化备注生成功能
         this.initNoteGenerator();
+        
+        // 初始化文字配置输入限制
+        this.initTextConfigInputs();
 
         // 加载图层图片（将设置Canvas尺寸）
         await this.loadLayers();
@@ -1017,7 +1020,27 @@ class KeycapPreview {
         }
     }
 
-    // 打开生成备注模态框
+    // 初始化文字配置输入限制
+    initTextConfigInputs() {
+        const yearInput = document.getElementById('yearInputConfig');
+        const wordInput = document.getElementById('wordInputConfig');
+        
+        // 年份输入限制为数字
+        if (yearInput) {
+            yearInput.addEventListener('input', (e) => {
+                e.target.value = e.target.value.replace(/[^0-9]/g, '');
+            });
+        }
+        
+        // 单词输入限制为字母
+        if (wordInput) {
+            wordInput.addEventListener('input', (e) => {
+                e.target.value = e.target.value.replace(/[^A-Za-z]/g, '');
+            });
+        }
+    }
+    
+    // 打开生成备注模态框（保留方法以兼容可能的其他调用）
     openNoteModal() {
         const modal = document.getElementById('noteModal');
         modal.classList.add('show');
@@ -1083,7 +1106,55 @@ class KeycapPreview {
         });
     }
 
-    // 生成备注
+    // 生成并复制备注（新方法，直接复制到剪贴板）
+    generateAndCopyNote() {
+        // 从文字配置区域获取输入
+        const yearInput = document.getElementById('yearInputConfig');
+        const wordInput = document.getElementById('wordInputConfig');
+        
+        const year = yearInput ? yearInput.value.trim() : '';
+        const word = wordInput ? wordInput.value.trim() : '';
+
+        // 验证年份
+        if (!year || year.length !== 4) {
+            this.showToast('请输入4位数字年份', 'warning');
+            return;
+        }
+
+        // 验证单词
+        if (!word || word.length === 0) {
+            this.showToast('请输入英文单词', 'warning');
+            return;
+        }
+
+        // 检查色卡编号是否完整
+        const missingColors = [];
+        ['A', 'B', 'C', 'D', 'E', 'F'].forEach(letter => {
+            if (!this.colorNumbers[letter]) {
+                missingColors.push(letter);
+            }
+        });
+
+        if (missingColors.length > 0) {
+            this.showToast(`请先为以下颜色选择色卡编号：${missingColors.join(', ')}`, 'warning');
+            return;
+        }
+
+        // 生成备注
+        const noteParts = [];
+        ['A', 'B', 'C', 'D', 'E', 'F'].forEach(letter => {
+            noteParts.push(`${letter}-${this.colorNumbers[letter]}`);
+        });
+        noteParts.push(year);
+        noteParts.push(word);
+
+        const note = noteParts.join(', ');
+
+        // 直接复制到剪贴板
+        this.copyNoteToClipboard(note);
+    }
+    
+    // 生成备注（保留方法以兼容模态框）
     generateNote() {
         const year = document.getElementById('yearInput').value.trim();
         const word = document.getElementById('wordInput').value.trim();
@@ -1131,6 +1202,30 @@ class KeycapPreview {
 
         // 自动复制
         this.copyNote();
+    }
+    
+    // 复制备注到剪贴板（新方法，接受参数）
+    async copyNoteToClipboard(note) {
+        if (!note) {
+            this.showToast('备注内容为空', 'warning');
+            return;
+        }
+
+        try {
+            await navigator.clipboard.writeText(note);
+            this.showToast('备注已复制到剪贴板！', 'success');
+        } catch (error) {
+            // 降级方案：使用传统方法
+            const textarea = document.createElement('textarea');
+            textarea.value = note;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            this.showToast('备注已复制到剪贴板！', 'success');
+        }
     }
 
     // 复制备注到剪贴板

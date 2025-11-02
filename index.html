@@ -95,6 +95,31 @@
 
         <!-- 右侧控制面板 -->
         <aside class="right-panel">
+          <section class="text-config">
+            <h2>文字配置</h2>
+            <div class="note-input-group">
+              <label for="yearInputConfig">
+                <span>年份（4位数字）</span>
+                <input
+                  type="text"
+                  id="yearInputConfig"
+                  placeholder="例如：2025"
+                  maxlength="4"
+                  pattern="[0-9]{4}"
+                />
+              </label>
+              <label for="wordInputConfig">
+                <span>英文单词</span>
+                <input
+                  type="text"
+                  id="wordInputConfig"
+                  placeholder="例如：Victory"
+                  pattern="[A-Za-z]+"
+                />
+              </label>
+            </div>
+          </section>
+
           <section class="scheme-controls">
             <h2>配色方案管理</h2>
             <div class="scheme-input-group">
