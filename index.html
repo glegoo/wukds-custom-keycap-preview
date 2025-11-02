@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WUKDS 键帽配色预览工具</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>WUKDS 三周年活动 - 键帽配色预览</h1>
+        <p class="subtitle">1945/2025 (2022-2025)</p>
+      </header>
+
+      <div class="main-content">
+        <!-- 左侧控制面板 -->
+        <aside class="control-panel">
+          <section class="color-controls">
+            <h2>颜色自定义</h2>
+
+            <div class="color-group">
+              <label for="colorA">
+                <span class="color-label">A - 字符颜色</span>
+                <div class="color-input-wrapper">
+                  <input type="color" id="colorA" value="#FFFFFF" />
+                  <button
+                    class="color-card-btn"
+                    data-letter="A"
+                    title="从色卡选择"
+                  >
+                    色卡
+                  </button>
+                </div>
+                <span class="color-number" id="colorNumberA"></span>
+              </label>
+            </div>
+
+            <div class="color-group">
+              <label for="colorB">
+                <span class="color-label">B - 主体颜色</span>
+                <div class="color-input-wrapper">
+                  <input type="color" id="colorB" value="#8B1A1A" />
+                  <button
+                    class="color-card-btn"
+                    data-letter="B"
+                    title="从色卡选择"
+                  >
+                    色卡
+                  </button>
+                </div>
+                <span class="color-number" id="colorNumberB"></span>
+              </label>
+            </div>
+
+            <div class="color-group">
+              <label for="colorC">
+                <span class="color-label">C - 色带颜色一</span>
+                <div class="color-input-wrapper">
+                  <input type="color" id="colorC" value="#FF8C42" />
+                  <button
+                    class="color-card-btn"
+                    data-letter="C"
+                    title="从色卡选择"
+                  >
+                    色卡
+                  </button>
+                </div>
+                <span class="color-number" id="colorNumberC"></span>
+              </label>
+            </div>
+
+            <div class="color-group">
+              <label for="colorD">
+                <span class="color-label">D - 色带颜色二</span>
+                <div class="color-input-wrapper">
+                  <input type="color" id="colorD" value="#FFB884" />
+                  <button
+                    class="color-card-btn"
+                    data-letter="D"
+                    title="从色卡选择"
+                  >
+                    色卡
+                  </button>
+                </div>
+                <span class="color-number" id="colorNumberD"></span>
+              </label>
+            </div>
+
+            <div class="color-group">
+              <label for="colorE">
+                <span class="color-label">E - 色带颜色三</span>
+                <div class="color-input-wrapper">
+                  <input type="color" id="colorE" value="#FFCFA8" />
+                  <button
+                    class="color-card-btn"
+                    data-letter="E"
+                    title="从色卡选择"
+                  >
+                    色卡
+                  </button>
+                </div>
+                <span class="color-number" id="colorNumberE"></span>
+              </label>
+            </div>
+
+            <div class="color-group">
+              <label for="colorF">
+                <span class="color-label">F - 色带颜色四</span>
+                <div class="color-input-wrapper">
+                  <input type="color" id="colorF" value="#FFE4C8" />
+                  <button
+                    class="color-card-btn"
+                    data-letter="F"
+                    title="从色卡选择"
+                  >
+                    色卡
+                  </button>
+                </div>
+                <span class="color-number" id="colorNumberF"></span>
+              </label>
+            </div>
+          </section>
+        </aside>
+
+        <!-- 中间预览区域 -->
+        <main class="preview-area">
+          <div class="preview-container">
+            <div class="loading" id="loading">
+              <div class="spinner"></div>
+              <p>加载中...</p>
+            </div>
+            <canvas id="previewCanvas"></canvas>
+          </div>
+          <p class="preview-hint">实时预览区域 - 180种颜色可选</p>
+        </main>
+
+        <!-- 右侧控制面板 -->
+        <aside class="right-panel">
+          <section class="scheme-controls">
+            <h2>配色方案管理</h2>
+            <div class="scheme-input-group">
+              <input
+                type="text"
+                id="schemeNameInput"
+                placeholder="输入方案名称"
+                class="scheme-name-input"
+              />
+              <button id="saveSchemeBtn" class="btn btn-primary">
+                保存方案
+              </button>
+            </div>
+            <div class="saved-schemes-list" id="savedSchemesList">
+              <!-- 已保存的方案列表将动态生成 -->
+            </div>
+          </section>
+
+          <section class="action-controls">
+            <button id="resetBtn" class="btn btn-secondary">
+              重置为原始配色
+            </button>
+            <button id="exportBtn" class="btn btn-primary">导出图片</button>
+            <button id="generateNoteBtn" class="btn btn-primary">生成备注</button>
+          </section>
+        </aside>
+      </div>
+    </div>
+
+    <!-- 色卡选择模态框 -->
+    <div id="colorCardModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>选择颜色</h2>
+          <button class="modal-close" id="closeModal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="color-card-container">
+            <div class="color-card-section">
+              <h3>可选色号: 1-90</h3>
+              <canvas id="colorCard1" class="color-card-canvas"></canvas>
+            </div>
+            <div class="color-card-section">
+              <h3>可选色号: 91-180</h3>
+              <canvas id="colorCard2" class="color-card-canvas"></canvas>
+            </div>
+          </div>
+          <div
+            class="selected-color-info"
+            id="selectedColorInfo"
+            style="display: none"
+          >
+            <div class="selected-color-content">
+              <div class="keycap-preview">
+                <svg
+                  id="keycapSvg"
+                  width="80"
+                  height="80"
+                  viewBox="272.1595 -22.281 515.6401 538.43"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    id="keycapSide"
+                    d="m815.74 405.54-69.33-107.83s-112.19 27.09-179.48 27.09-179.48-27.09-179.48-27.09l-69.33 107.83c-5.88 9.15-9.01 19.8-9.01 30.68v131.28 230.24c0 21.21 17.19 38.4 38.4 38.4h133.61 85.81 102.22 117.2c21.21 0 38.4-17.19 38.4-38.4v-230.24-131.28c0-10.88-3.13-21.53-9.01-30.68z"
+                    fill="#8B1A1A"
+                    transform="matrix(1, 0, 0, 1, -36.950516848281495, -319.99106788608606)"
+                  />
+                  <path
+                    id="keycapBottom"
+                    d="m815.74 822.45-69.33-107.83h-358.96l-69.33 107.83c7.04 8.37 17.59 13.69 29.39 13.69h438.84c11.8.01 22.35-5.32 29.39-13.69z"
+                    fill="#8B1A1A"
+                    transform="matrix(1, 0, 0, 1, -36.950516848281495, -319.99106788608606)"
+                  />
+                  <path
+                    id="keycapTop"
+                    d="m746.41 516.88v-219.17s-102.63 12.72-179.48 12.72-179.48-12.72-179.48-12.72v219.17s-.31 197.63 0 197.74c49.09 17.03 112.04 27.53 179.48 27.53s130.39-10.5 179.48-27.53c.31-.11 0-197.74 0-197.74z"
+                    fill="#8B1A1A"
+                    transform="matrix(1, 0, 0, 1, -36.950516848281495, -319.99106788608606)"
+                  />
+                </svg>
+              </div>
+              <div class="selected-color-text">
+                <span class="color-number-badge" id="selectedColorNumber"
+                  >0</span
+                >
+                <span class="color-hex" id="selectedColorHex">#000000</span>
+              </div>
+              <button id="confirmColorBtn" class="btn btn-primary btn-sm">
+                确认
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 生成备注模态框 -->
+    <div id="noteModal" class="modal">
+      <div class="modal-content modal-small">
+        <div class="modal-header">
+          <h2>生成备注</h2>
+          <button class="modal-close" id="closeNoteModal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="note-input-group">
+            <label for="yearInput">
+              <span>年份（4位数字）</span>
+              <input
+                type="text"
+                id="yearInput"
+                placeholder="例如：2025"
+                maxlength="4"
+                pattern="[0-9]{4}"
+              />
+            </label>
+            <label for="wordInput">
+              <span>英文单词</span>
+              <input
+                type="text"
+                id="wordInput"
+                placeholder="例如：Victory"
+                pattern="[A-Za-z]+"
+              />
+            </label>
+          </div>
+          <button id="generateNoteConfirmBtn" class="btn btn-primary">
+            生成备注
+          </button>
+          <div class="note-result" id="noteResult" style="display: none">
+            <label>生成的备注：</label>
+            <div class="note-text-wrapper">
+              <textarea
+                id="noteText"
+                readonly
+                rows="3"
+                class="note-text"
+              ></textarea>
+              <button id="copyNoteBtn" class="btn btn-secondary btn-sm">
+                复制
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 页脚 -->
+    <footer class="page-footer">
+      <div class="footer-content">
+        <div class="footer-links">
+          <a
+            href="https://github.com/glegoo"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="footer-link"
+            title="GitHub"
+          >
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"
+              />
+            </svg>
+            <span>github.com/glegoo</span>
+          </a>
+          <a
+            href="mailto:24253674@qq.com"
+            class="footer-link"
+            title="邮箱"
+          >
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"
+              />
+            </svg>
+            <span>24253674@qq.com</span>
+          </a>
+        </div>
+      </div>
+    </footer>
+
+    <script src="config.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
