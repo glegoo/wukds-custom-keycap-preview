@@ -444,7 +444,7 @@ class KeycapPreview {
     // 在右下角绘制水印文字
     drawWatermark() {
         const text = 'WUKDS';
-        const padding = 20; // 距离边缘的间距
+        const padding = 80; // 距离边缘的间距
         const fontSize = Math.max(36, this.canvas.width * 0.05); // 增大字体，根据canvas大小自适应
         
         // 检查字体是否可用
