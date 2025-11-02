@@ -48,7 +48,8 @@ class KeycapPreview {
         // 文字配置
         this.textConfig = {
             year: '1970',
-            word: 'Music'
+            word: 'Music',
+            wordSpace: '' // 英文单词（空格），非必填
         };
         
         // 字体加载状态
@@ -670,15 +671,20 @@ class KeycapPreview {
         if (scheme.textConfig) {
             this.textConfig.year = scheme.textConfig.year || '1970';
             this.textConfig.word = scheme.textConfig.word || 'Music';
+            this.textConfig.wordSpace = scheme.textConfig.wordSpace || '';
             
             // 更新输入框
             const yearInput = document.getElementById('yearInputConfig');
             const wordInput = document.getElementById('wordInputConfig');
+            const wordSpaceInput = document.getElementById('wordSpaceInputConfig');
             if (yearInput) {
                 yearInput.value = this.textConfig.year;
             }
             if (wordInput) {
                 wordInput.value = this.textConfig.word;
+            }
+            if (wordSpaceInput) {
+                wordSpaceInput.value = this.textConfig.wordSpace;
             }
         }
 
@@ -891,15 +897,20 @@ class KeycapPreview {
         // 重置年份和单词为默认值
         this.textConfig.year = '1970';
         this.textConfig.word = 'Music';
+        this.textConfig.wordSpace = '';
         
         // 更新年份和单词输入框
         const yearInput = document.getElementById('yearInputConfig');
         const wordInput = document.getElementById('wordInputConfig');
+        const wordSpaceInput = document.getElementById('wordSpaceInputConfig');
         if (yearInput) {
             yearInput.value = this.textConfig.year;
         }
         if (wordInput) {
             wordInput.value = this.textConfig.word;
+        }
+        if (wordSpaceInput) {
+            wordSpaceInput.value = this.textConfig.wordSpace;
         }
         
         // 更新所有选项卡颜色
@@ -1216,6 +1227,7 @@ class KeycapPreview {
     initTextConfigInputs() {
         const yearInput = document.getElementById('yearInputConfig');
         const wordInput = document.getElementById('wordInputConfig');
+        const wordSpaceInput = document.getElementById('wordSpaceInputConfig');
         
         // 设置初始值
         if (yearInput) {
@@ -1223,6 +1235,9 @@ class KeycapPreview {
         }
         if (wordInput) {
             wordInput.value = this.textConfig.word;
+        }
+        if (wordSpaceInput) {
+            wordSpaceInput.value = this.textConfig.wordSpace || '';
         }
         
         // 年份输入限制为数字
@@ -1250,6 +1265,19 @@ class KeycapPreview {
                 }, 100);
             });
         }
+        
+        // 单词（空格）输入限制为字母
+        if (wordSpaceInput) {
+            wordSpaceInput.addEventListener('input', (e) => {
+                e.target.value = e.target.value.replace(/[^A-Za-z]/g, '');
+                this.textConfig.wordSpace = e.target.value;
+                // 防抖更新预览
+                clearTimeout(this.updateTimer);
+                this.updateTimer = setTimeout(() => {
+                    this.updatePreview();
+                }, 100);
+            });
+        }
     }
     
     // 加载字体
@@ -1258,12 +1286,12 @@ class KeycapPreview {
             // 使用document.fonts API加载字体
             const stapelFont = new FontFace(
                 'Stapel Narrow Extra Bold Italic',
-                `url(${encodeURI('assets/fonts/Stapel_Narrow-Extra-Bold-Italic.ttf')})`
+                `url(${encodeURI('assets/fonts/ERASB.TTF')})`
             );
             
             const frestyFont = new FontFace(
                 'Fresty Personal Use Only',
-                `url(${encodeURI('assets/fonts/fresty.ttf')})`
+                `url(${encodeURI('assets/fonts/Riverside.ttf')})`
             );
             
             Promise.all([stapelFont.load(), frestyFont.load()])
@@ -1331,9 +1359,9 @@ class KeycapPreview {
         const originalYearX = 780;
         const originalYearY = 400;
         const originalWord1X = 780;
-        const originalWord1Y = 420;
-        const originalWord2X = 467;
-        const originalWord2Y = 509;
+        const originalWord1Y = 418;
+        const originalWord2X = 470;
+        const originalWord2Y = 510;
         
         // 根据Canvas缩放比例调整坐标
         const yearX = originalYearX * this.canvasScale;
@@ -1344,9 +1372,9 @@ class KeycapPreview {
         const word2Y = originalWord2Y * this.canvasScale;
         
         // 根据Canvas缩放比例调整字号
-        const yearFontSize = 22 * this.canvasScale;
-        const word1FontSize = 14 * this.canvasScale;
-        const word2FontSize = 30 * this.canvasScale;
+        const yearFontSize = 18 * this.canvasScale;
+        const word1FontSize = 11 * this.canvasScale;
+        const word2FontSize = 22 * this.canvasScale;
         
         // 获取元素B的颜色用于文字渲染
         const textColor = this.currentColors.B || CONFIG.originalColors.B;
@@ -1360,7 +1388,7 @@ class KeycapPreview {
             document.fonts.check('30px "Fresty Personal Use Only"') ||
             document.fonts.check('1em "Fresty Personal Use Only"');
         
-        // 绘制年份文字：位置(780, 400)，字体 Stapel_Narrow-Extra-Bold-Italic.ttf，字号20px
+        // 绘制年份文字：位置(780, 400)，字体 ERASB.TTF，字号20px，斜体10度，文字间距-0.4
         if (this.textConfig.year && stapelAvailable) {
             this.ctx.save();
             this.ctx.globalCompositeOperation = 'source-over'; // 确保文字在最上层
@@ -1368,7 +1396,26 @@ class KeycapPreview {
             this.ctx.fillStyle = textColor; // 使用元素B的颜色
             this.ctx.textBaseline = 'top';
             this.ctx.textAlign = 'left';
-            this.ctx.fillText(this.textConfig.year, yearX, yearY);
+            
+            // 移动到绘制位置并应用斜体变换（10度）
+            this.ctx.translate(yearX, yearY);
+            const skewX = Math.tan(-10 * Math.PI / 180); // 10度转弧度，计算斜体倾斜值
+            this.ctx.transform(1, 0, skewX, 1, 0, 0);
+            
+            // 文字间距-0.4（字体大小的-0.4倍）
+            const letterSpacing = -0.05 * yearFontSize;
+            const yearText = this.textConfig.year;
+            let currentX = 0;
+            
+            // 逐个字符绘制，实现文字间距
+            for (let i = 0; i < yearText.length; i++) {
+                const char = yearText[i];
+                this.ctx.fillText(char, currentX, 0);
+                // 计算字符宽度并加上间距
+                const charWidth = this.ctx.measureText(char).width;
+                currentX += charWidth + letterSpacing;
+            }
+            
             this.ctx.restore();
         } else if (this.textConfig.year) {
             console.warn('年份文字未绘制：字体未加载或内容为空', {
@@ -1378,7 +1425,7 @@ class KeycapPreview {
             });
         }
         
-        // 绘制单词第一处：位置(780, 415)，字体 Stapel_Narrow-Extra-Bold-Italic.ttf，字号16px，首字母大写
+        // 绘制单词第一处：位置(780, 415)，字体 ERASB.TTF，字号16px，首字母大写，斜体10度
         if (this.textConfig.word && stapelAvailable) {
             const capitalizedWord = this.capitalizeFirstLetter(this.textConfig.word);
             this.ctx.save();
@@ -1387,7 +1434,13 @@ class KeycapPreview {
             this.ctx.fillStyle = textColor; // 使用元素B的颜色
             this.ctx.textBaseline = 'top';
             this.ctx.textAlign = 'left';
-            this.ctx.fillText(capitalizedWord, word1X, word1Y);
+            
+            // 移动到绘制位置并应用斜体变换（10度）
+            this.ctx.translate(word1X, word1Y);
+            const skewX = Math.tan(-10 * Math.PI / 180); // 10度转弧度，计算斜体倾斜值
+            this.ctx.transform(1, 0, skewX, 1, 0, 0);
+            
+            this.ctx.fillText(capitalizedWord, 0, 0);
             this.ctx.restore();
         } else if (this.textConfig.word) {
             console.warn('单词第一处未绘制：字体未加载或内容为空', {
@@ -1397,10 +1450,15 @@ class KeycapPreview {
             });
         }
         
-        // 绘制单词第二处：位置(467, 509)，字体 fresty Personal Use Only.ttf，字号30px，首字母大写
+        // 绘制单词第二处：位置(467, 509)，字体 Riverside.ttf，字号30px，首字母大写
+        // 优先使用 wordSpace，如果没有则使用 word
         // 即使字体检查失败，也尝试绘制（字体可能已加载但check()有问题）
-        if (this.textConfig.word) {
-            const capitalizedWord = this.capitalizeFirstLetter(this.textConfig.word);
+        const wordToDraw = (this.textConfig.wordSpace && this.textConfig.wordSpace.trim()) 
+            ? this.textConfig.wordSpace 
+            : this.textConfig.word;
+        
+        if (wordToDraw) {
+            const capitalizedWord = this.capitalizeFirstLetter(wordToDraw);
             this.ctx.save();
             this.ctx.globalCompositeOperation = 'source-over'; // 确保文字在最上层
             this.ctx.font = `${word2FontSize}px "Fresty Personal Use Only"`;

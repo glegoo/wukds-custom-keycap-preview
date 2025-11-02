@@ -114,11 +114,20 @@
                 />
               </label>
               <label for="wordInputConfig">
-                <span>英文单词</span>
+                <span>英文单词（回车）</span>
                 <input
                   type="text"
                   id="wordInputConfig"
                   placeholder="例如：Victory"
+                  pattern="[A-Za-z]+"
+                />
+              </label>
+              <label for="wordSpaceInputConfig">
+                <span>英文单词（空格，非必填）</span>
+                <input
+                  type="text"
+                  id="wordSpaceInputConfig"
+                  placeholder="例如：Victory（非必填）"
                   pattern="[A-Za-z]+"
                 />
               </label>
