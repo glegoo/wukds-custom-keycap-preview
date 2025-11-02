@@ -40,6 +40,21 @@ class KeycapPreview {
             F: null
         };
         
+        // 文字配置
+        this.textConfig = {
+            year: '1970',
+            word: 'Music'
+        };
+        
+        // 字体加载状态
+        this.fontsLoaded = {
+            stapel: false,
+            fresty: false
+        };
+        
+        // Canvas缩放比例（用于坐标转换）
+        this.canvasScale = 1;
+        
         this.init();
     }
 
@@ -74,6 +89,9 @@ class KeycapPreview {
         
         // 初始化文字配置输入限制
         this.initTextConfigInputs();
+        
+        // 加载字体
+        await this.loadFonts();
 
         // 加载图层图片（将设置Canvas尺寸）
         await this.loadLayers();
@@ -96,6 +114,7 @@ class KeycapPreview {
             const scale = Math.min(maxWidth / frameImg.width, 1);
             this.canvas.width = frameImg.width * scale;
             this.canvas.height = frameImg.height * scale;
+            this.canvasScale = scale; // 保存缩放比例
 
             // 加载其余图层（Frame已加载，跳过）
             const loadPromises = ['A', 'B', 'C', 'D', 'E', 'F'].map(layerName => {
@@ -243,6 +262,13 @@ class KeycapPreview {
 
         // 在右下角绘制文字 "WUKDS"
         this.drawWatermark();
+        
+        // 绘制用户配置的文字（年份和单词）- 必须在所有图层之后绘制，确保在最上层
+        this.ctx.globalCompositeOperation = 'source-over'; // 确保使用正常叠加模式
+        this.drawUserText();
+        
+        // 绘制色卡号列表（竖列排列）
+        this.drawColorNumbers();
     }
 
 
@@ -1025,10 +1051,24 @@ class KeycapPreview {
         const yearInput = document.getElementById('yearInputConfig');
         const wordInput = document.getElementById('wordInputConfig');
         
+        // 设置初始值
+        if (yearInput) {
+            yearInput.value = this.textConfig.year;
+        }
+        if (wordInput) {
+            wordInput.value = this.textConfig.word;
+        }
+        
         // 年份输入限制为数字
         if (yearInput) {
             yearInput.addEventListener('input', (e) => {
                 e.target.value = e.target.value.replace(/[^0-9]/g, '');
+                this.textConfig.year = e.target.value;
+                // 防抖更新预览
+                clearTimeout(this.updateTimer);
+                this.updateTimer = setTimeout(() => {
+                    this.updatePreview();
+                }, 100);
             });
         }
         
@@ -1036,8 +1076,244 @@ class KeycapPreview {
         if (wordInput) {
             wordInput.addEventListener('input', (e) => {
                 e.target.value = e.target.value.replace(/[^A-Za-z]/g, '');
+                this.textConfig.word = e.target.value;
+                // 防抖更新预览
+                clearTimeout(this.updateTimer);
+                this.updateTimer = setTimeout(() => {
+                    this.updatePreview();
+                }, 100);
             });
         }
+    }
+    
+    // 加载字体
+    async loadFonts() {
+        return new Promise((resolve) => {
+            // 使用document.fonts API加载字体
+            const stapelFont = new FontFace(
+                'Stapel Narrow Extra Bold Italic',
+                `url(${encodeURI('assets/fonts/Stapel_Narrow-Extra-Bold-Italic.ttf')})`
+            );
+            
+            const frestyFont = new FontFace(
+                'Fresty Personal Use Only',
+                `url(${encodeURI('assets/fonts/fresty.ttf')})`
+            );
+            
+            Promise.all([stapelFont.load(), frestyFont.load()])
+                .then((fonts) => {
+                    fonts.forEach(font => {
+                        document.fonts.add(font);
+                        console.log('字体已添加到文档:', font.family, font.status);
+                    });
+                    // 等待字体真正可用
+                    return document.fonts.ready;
+                })
+                .then(() => {
+                    // 给一点时间让字体完全可用
+                    return new Promise(resolve => setTimeout(resolve, 100));
+                })
+                .then(() => {
+                    // 验证字体是否真正加载成功（尝试多种检查方式）
+                    const stapelCheck1 = document.fonts.check('20px "Stapel Narrow Extra Bold Italic"');
+                    const stapelCheck2 = document.fonts.check('1em "Stapel Narrow Extra Bold Italic"');
+                    this.fontsLoaded.stapel = stapelCheck1 || stapelCheck2;
+                    
+                    const frestyCheck1 = document.fonts.check('30px "Fresty Personal Use Only"');
+                    const frestyCheck2 = document.fonts.check('1em "Fresty Personal Use Only"');
+                    this.fontsLoaded.fresty = frestyCheck1 || frestyCheck2;
+                    
+                    // 如果检查失败，检查字体是否在文档中
+                    if (!this.fontsLoaded.fresty) {
+                        const frestyInFonts = Array.from(document.fonts).some(font => 
+                            font.family === 'Fresty Personal Use Only' && font.status === 'loaded'
+                        );
+                        if (frestyInFonts) {
+                            console.log('字体在文档中找到，但check()返回false，将尝试使用');
+                            this.fontsLoaded.fresty = true; // 强制设为true，尝试使用
+                        }
+                    }
+                    
+                    if (!this.fontsLoaded.stapel) {
+                        const stapelInFonts = Array.from(document.fonts).some(font => 
+                            font.family === 'Stapel Narrow Extra Bold Italic' && font.status === 'loaded'
+                        );
+                        if (stapelInFonts) {
+                            console.log('Stapel字体在文档中找到，但check()返回false，将尝试使用');
+                            this.fontsLoaded.stapel = true;
+                        }
+                    }
+                    
+                    console.log('字体加载完成', {
+                        stapel: this.fontsLoaded.stapel,
+                        fresty: this.fontsLoaded.fresty,
+                        allFonts: Array.from(document.fonts).map(f => ({ family: f.family, status: f.status }))
+                    });
+                    resolve();
+                })
+                .catch((error) => {
+                    console.error('字体加载失败:', error);
+                    // 即使字体加载失败，也继续执行
+                    resolve();
+                });
+        });
+    }
+    
+    // 绘制用户配置的文字
+    drawUserText() {
+        // 原始坐标（基于原始图片尺寸）
+        const originalYearX = 780;
+        const originalYearY = 400;
+        const originalWord1X = 780;
+        const originalWord1Y = 420;
+        const originalWord2X = 467;
+        const originalWord2Y = 509;
+        
+        // 根据Canvas缩放比例调整坐标
+        const yearX = originalYearX * this.canvasScale;
+        const yearY = originalYearY * this.canvasScale;
+        const word1X = originalWord1X * this.canvasScale;
+        const word1Y = originalWord1Y * this.canvasScale;
+        const word2X = originalWord2X * this.canvasScale;
+        const word2Y = originalWord2Y * this.canvasScale;
+        
+        // 根据Canvas缩放比例调整字号
+        const yearFontSize = 22 * this.canvasScale;
+        const word1FontSize = 14 * this.canvasScale;
+        const word2FontSize = 30 * this.canvasScale;
+        
+        // 获取元素B的颜色用于文字渲染
+        const textColor = this.currentColors.B || CONFIG.originalColors.B;
+        
+        // 检查字体是否可用（如果FontFace API失败，尝试使用CSS定义的字体）
+        // 即使检查失败，也尝试绘制（有时字体已加载但check()返回false）
+        const stapelAvailable = this.fontsLoaded.stapel || 
+            document.fonts.check('20px "Stapel Narrow Extra Bold Italic"') ||
+            document.fonts.check('1em "Stapel Narrow Extra Bold Italic"');
+        const frestyAvailable = this.fontsLoaded.fresty || 
+            document.fonts.check('30px "Fresty Personal Use Only"') ||
+            document.fonts.check('1em "Fresty Personal Use Only"');
+        
+        // 绘制年份文字：位置(780, 400)，字体 Stapel_Narrow-Extra-Bold-Italic.ttf，字号20px
+        if (this.textConfig.year && stapelAvailable) {
+            this.ctx.save();
+            this.ctx.globalCompositeOperation = 'source-over'; // 确保文字在最上层
+            this.ctx.font = `${yearFontSize}px "Stapel Narrow Extra Bold Italic"`;
+            this.ctx.fillStyle = textColor; // 使用元素B的颜色
+            this.ctx.textBaseline = 'top';
+            this.ctx.textAlign = 'left';
+            this.ctx.fillText(this.textConfig.year, yearX, yearY);
+            this.ctx.restore();
+        } else if (this.textConfig.year) {
+            console.warn('年份文字未绘制：字体未加载或内容为空', {
+                year: this.textConfig.year,
+                stapelLoaded: this.fontsLoaded.stapel,
+                stapelAvailable
+            });
+        }
+        
+        // 绘制单词第一处：位置(780, 415)，字体 Stapel_Narrow-Extra-Bold-Italic.ttf，字号16px，首字母大写
+        if (this.textConfig.word && stapelAvailable) {
+            const capitalizedWord = this.capitalizeFirstLetter(this.textConfig.word);
+            this.ctx.save();
+            this.ctx.globalCompositeOperation = 'source-over'; // 确保文字在最上层
+            this.ctx.font = `${word1FontSize}px "Stapel Narrow Extra Bold Italic"`;
+            this.ctx.fillStyle = textColor; // 使用元素B的颜色
+            this.ctx.textBaseline = 'top';
+            this.ctx.textAlign = 'left';
+            this.ctx.fillText(capitalizedWord, word1X, word1Y);
+            this.ctx.restore();
+        } else if (this.textConfig.word) {
+            console.warn('单词第一处未绘制：字体未加载或内容为空', {
+                word: this.textConfig.word,
+                stapelLoaded: this.fontsLoaded.stapel,
+                stapelAvailable
+            });
+        }
+        
+        // 绘制单词第二处：位置(467, 509)，字体 fresty Personal Use Only.ttf，字号30px，首字母大写
+        // 即使字体检查失败，也尝试绘制（字体可能已加载但check()有问题）
+        if (this.textConfig.word) {
+            const capitalizedWord = this.capitalizeFirstLetter(this.textConfig.word);
+            this.ctx.save();
+            this.ctx.globalCompositeOperation = 'source-over'; // 确保文字在最上层
+            this.ctx.font = `${word2FontSize}px "Fresty Personal Use Only"`;
+            this.ctx.fillStyle = textColor; // 使用元素B的颜色
+            this.ctx.textBaseline = 'top';
+            this.ctx.textAlign = 'left';
+            
+            // 尝试绘制文字
+            try {
+                this.ctx.fillText(capitalizedWord, word2X, word2Y);
+                // 如果绘制成功但没有字体，可能会回退到默认字体，但至少会显示文字
+                if (!frestyAvailable) {
+                    console.warn('Fresty字体可能未正确加载，但已尝试绘制文字', {
+                        word: capitalizedWord,
+                        font: this.ctx.font
+                    });
+                }
+            } catch (error) {
+                console.error('绘制单词第二处时出错:', error);
+            }
+            this.ctx.restore();
+        }
+    }
+    
+    // 绘制色卡号列表（竖列排列）
+    drawColorNumbers() {
+        // 原始坐标（基于原始图片尺寸）
+        const originalX = 900;
+        const originalY = 640;
+        
+        // 根据Canvas缩放比例调整坐标
+        const x = originalX * this.canvasScale;
+        const startY = originalY * this.canvasScale;
+        
+        // 根据Canvas缩放比例调整字号
+        const fontSize = 40 * this.canvasScale;
+        
+        // 获取A的配色
+        const textColor = this.currentColors.F || CONFIG.originalColors.F;
+        
+        // 检查字体是否可用
+        const stapelAvailable = this.fontsLoaded.stapel || 
+            document.fonts.check('20px "Stapel Narrow Extra Bold Italic"') ||
+            document.fonts.check('1em "Stapel Narrow Extra Bold Italic"');
+        
+        if (!stapelAvailable) {
+            console.warn('Stapel字体未加载，无法绘制色卡号');
+            return;
+        }
+        
+        // 设置文字样式
+        this.ctx.save();
+        this.ctx.globalCompositeOperation = 'source-over'; // 确保文字在最上层
+        this.ctx.font = `${fontSize}px "Stapel Narrow Extra Bold Italic"`;
+        this.ctx.fillStyle = textColor; // 使用A的配色
+        this.ctx.textBaseline = 'top';
+        this.ctx.textAlign = 'left';
+        
+        // 竖列排列所有字母的色卡号
+        const letters = ['A', 'B', 'C', 'D', 'E', 'F'];
+        const lineHeight = fontSize * 1.2; // 行高为字号的1.2倍
+        
+        letters.forEach((letter, index) => {
+            const y = startY + index * lineHeight;
+            const colorNumber = this.colorNumbers[letter];
+            
+            // 如果有色卡号，显示 "A-xx"，否则显示 "A-"（色卡号为空）
+            const text = colorNumber ? `${letter} - ${colorNumber}` : `${letter} -`;
+            
+            this.ctx.fillText(text, x, y);
+        });
+        
+        this.ctx.restore();
+    }
+    
+    // 首字母大写
+    capitalizeFirstLetter(str) {
+        if (!str) return '';
+        return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
     }
     
     // 打开生成备注模态框（保留方法以兼容可能的其他调用）

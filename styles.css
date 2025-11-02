@@ -1,3 +1,18 @@
+/* 字体定义 */
+@font-face {
+  font-family: 'Stapel Narrow Extra Bold Italic';
+  src: url('assets/fonts/Stapel_Narrow-Extra-Bold-Italic.ttf') format('truetype');
+  font-weight: 800;
+  font-style: italic;
+}
+
+@font-face {
+  font-family: 'Fresty Personal Use Only';
+  src: url('assets/fonts/fresty.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
 * {
   margin: 0;
   padding: 0;
