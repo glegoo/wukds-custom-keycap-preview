@@ -38,6 +38,40 @@ class KeycapPreview {
             F: null
         };
         
+        // 图层相关（用于精确颜色替换）
+        this.layerImages = {
+            A: null,
+            B: null,
+            C: null,
+            D: null,
+            E: null,
+            F: null
+        };
+        this.layerImageData = {
+            A: null,
+            B: null,
+            C: null,
+            D: null,
+            E: null,
+            F: null
+        };
+        
+        // 背景图层相关
+        this.bgLayerImages = {
+            B: null,
+            C: null,
+            D: null,
+            E: null,
+            F: null
+        };
+        this.bgLayerImageData = {
+            B: null,
+            C: null,
+            D: null,
+            E: null,
+            F: null
+        };
+        
         this.init();
     }
 
@@ -67,6 +101,12 @@ class KeycapPreview {
 
         // 加载图片
         await this.loadImage();
+        
+        // 加载图层图片（必须在原始图片加载之后，需要知道Canvas尺寸）
+        await this.loadLayers();
+        
+        // 加载背景图层图片
+        await this.loadBgLayers();
         
         // 加载色卡图片
         await this.loadColorCards();
@@ -108,6 +148,156 @@ class KeycapPreview {
         });
     }
 
+    // 加载图层图片
+    async loadLayers() {
+        if (!this.originalImageData) {
+            throw new Error('必须先加载原始图片');
+        }
+
+        const targetWidth = this.canvas.width;
+        const targetHeight = this.canvas.height;
+
+        // 创建临时Canvas用于处理图层
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = targetWidth;
+        tempCanvas.height = targetHeight;
+        const tempCtx = tempCanvas.getContext('2d');
+
+        // 加载所有图层
+        const loadPromises = ['A', 'B', 'C', 'D', 'E', 'F'].map(letter => {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                
+                img.onload = () => {
+                    // 清空临时Canvas
+                    tempCtx.clearRect(0, 0, targetWidth, targetHeight);
+                    
+                    // 将图层图片绘制到临时Canvas，缩放到目标尺寸
+                    tempCtx.drawImage(img, 0, 0, targetWidth, targetHeight);
+                    
+                    // 提取ImageData
+                    const imageData = tempCtx.getImageData(0, 0, targetWidth, targetHeight);
+                    
+                    // 存储图片和ImageData
+                    this.layerImages[letter] = img;
+                    this.layerImageData[letter] = imageData;
+                    
+                    resolve();
+                };
+                
+                img.onerror = () => {
+                    console.error(`图层 ${letter} 加载失败: ${CONFIG.layerPaths[letter]}`);
+                    reject(new Error(`图层 ${letter} 加载失败`));
+                };
+                
+                img.src = CONFIG.layerPaths[letter];
+            });
+        });
+
+        try {
+            await Promise.all(loadPromises);
+            console.log('所有图层加载完成');
+            
+            // 调试：检查图层数据
+            ['A', 'B', 'C', 'D', 'E', 'F'].forEach(letter => {
+                const layerData = this.layerImageData[letter];
+                if (layerData) {
+                    const samplePixels = [];
+                    for (let i = 0; i < Math.min(100, layerData.data.length); i += 400) {
+                        const r = layerData.data[i];
+                        const g = layerData.data[i + 1];
+                        const b = layerData.data[i + 2];
+                        const a = layerData.data[i + 3];
+                        const brightness = (r + g + b) / 3;
+                        samplePixels.push({ r, g, b, a, brightness });
+                    }
+                    console.log(`图层 ${letter} 样本像素:`, samplePixels.slice(0, 5));
+                }
+            });
+        } catch (error) {
+            console.error('图层加载错误:', error);
+            alert('部分图层加载失败，请检查图层文件是否存在');
+        }
+    }
+
+    // 加载背景图层图片
+    async loadBgLayers() {
+        if (!this.originalImageData) {
+            throw new Error('必须先加载原始图片');
+        }
+
+        const targetWidth = this.canvas.width;
+        const targetHeight = this.canvas.height;
+
+        // 创建临时Canvas用于处理图层
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = targetWidth;
+        tempCanvas.height = targetHeight;
+        const tempCtx = tempCanvas.getContext('2d');
+
+        // 加载所有背景图层（B, C, D, E, F）
+        const loadPromises = ['B', 'C', 'D', 'E', 'F'].map(letter => {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                
+                img.onload = () => {
+                    // 清空临时Canvas
+                    tempCtx.clearRect(0, 0, targetWidth, targetHeight);
+                    
+                    // 将图层图片绘制到临时Canvas，缩放到目标尺寸
+                    tempCtx.drawImage(img, 0, 0, targetWidth, targetHeight);
+                    
+                    // 提取ImageData
+                    const imageData = tempCtx.getImageData(0, 0, targetWidth, targetHeight);
+                    
+                    // 存储图片和ImageData
+                    this.bgLayerImages[letter] = img;
+                    this.bgLayerImageData[letter] = imageData;
+                    
+                    resolve();
+                };
+                
+                img.onerror = () => {
+                    console.error(`背景图层 ${letter} 加载失败: ${CONFIG.bgLayerPaths[letter]}`);
+                    reject(new Error(`背景图层 ${letter} 加载失败`));
+                };
+                
+                img.src = CONFIG.bgLayerPaths[letter];
+            });
+        });
+
+        try {
+            await Promise.all(loadPromises);
+            console.log('所有背景图层加载完成');
+        } catch (error) {
+            console.error('背景图层加载错误:', error);
+            alert('部分背景图层加载失败，请检查图层文件是否存在');
+        }
+    }
+
+    // 根据主颜色和亮度系数计算背景颜色
+    calculateBgColor(letter, mainColorHex) {
+        // 获取亮度系数（D、E、F使用C的系数）
+        let coefficients = CONFIG.brightnessCoefficients[letter];
+        if (!coefficients) {
+            // D、E、F使用C的系数
+            coefficients = CONFIG.brightnessCoefficients.C;
+        }
+
+        // 将主颜色转换为RGB
+        const mainRgb = this.hexToRgb(mainColorHex);
+
+        // 应用亮度系数计算背景颜色
+        const bgR = Math.round(mainRgb.r * coefficients.r);
+        const bgG = Math.round(mainRgb.g * coefficients.g);
+        const bgB = Math.round(mainRgb.b * coefficients.b);
+
+        // 转换回十六进制
+        return this.rgbToHex(bgR, bgG, bgB);
+    }
+
     // 颜色变化处理（防抖）
     onColorChange(letter) {
         const newColor = this.colorInputs[letter].value;
@@ -133,9 +323,28 @@ class KeycapPreview {
         }, 100);
     }
 
-    // 更新预览
+    // 更新预览（基于图层掩码的精确替换）
     updatePreview() {
         if (!this.originalImageData) return;
+
+        // 检查图层是否已加载
+        const layersReady = ['A', 'B', 'C', 'D', 'E', 'F'].every(letter => {
+            return this.layerImageData[letter] !== null;
+        });
+
+        // 检查背景图层是否已加载（B, C, D, E, F）
+        const bgLayersReady = ['B', 'C', 'D', 'E', 'F'].every(letter => {
+            return this.bgLayerImageData[letter] !== null;
+        });
+
+        if (!layersReady) {
+            console.warn('图层未完全加载，无法更新预览');
+            return;
+        }
+
+        if (!bgLayersReady) {
+            console.warn('背景图层未完全加载，背景颜色可能无法正确显示');
+        }
 
         // 创建新的ImageData副本
         const imageData = new ImageData(
@@ -145,85 +354,118 @@ class KeycapPreview {
         );
 
         const data = imageData.data;
-        const tolerance = CONFIG.colorTolerance;
-        const backgroundTolerance = CONFIG.backgroundTolerance || tolerance;
+        const width = imageData.width;
+        const height = imageData.height;
 
-        // 计算每个颜色区域的变换系数
+        // 计算每个颜色区域的新颜色值
         const colorTransforms = {};
         ['A', 'B', 'C', 'D', 'E', 'F'].forEach(letter => {
-            const originalHex = CONFIG.originalColors[letter];
             const newHex = this.currentColors[letter];
-            const originalRgb = this.hexToRgb(originalHex);
             const newRgb = this.hexToRgb(newHex);
             
-            // 存储原始颜色和新颜色的RGB值
-            const transform = {
-                original: originalRgb,
+            // 只存储新颜色的RGB值
+            colorTransforms[letter] = {
                 new: newRgb
             };
+        });
+
+        // 计算背景颜色（B, C, D, E, F有背景图层）
+        const bgColorTransforms = {};
+        ['B', 'C', 'D', 'E', 'F'].forEach(letter => {
+            const mainColorHex = this.currentColors[letter];
+            const bgColorHex = this.calculateBgColor(letter, mainColorHex);
+            const bgRgb = this.hexToRgb(bgColorHex);
             
-            colorTransforms[letter] = transform;
+            bgColorTransforms[letter] = {
+                new: bgRgb
+            };
         });
 
         // 遍历每个像素
-        for (let i = 0; i < data.length; i += 4) {
-            const r = data[i];
-            const g = data[i + 1];
-            const b = data[i + 2];
-            const a = data[i + 3];
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                const i = (y * width + x) * 4;
+                const r = data[i];
+                const g = data[i + 1];
+                const b = data[i + 2];
+                const a = data[i + 3];
 
-            // 跳过透明像素
-            if (a < 128) continue;
+                // 跳过透明像素
+                if (a < 128) continue;
 
-            const pixelColor = { r, g, b };
+                // 按优先级顺序检查图层（A -> B -> C -> D -> E -> F）
+                let matchedLayer = null;
+                for (const letter of ['A', 'B', 'C', 'D', 'E', 'F']) {
+                    const layerData = this.layerImageData[letter];
+                    if (!layerData) continue;
 
-            // 检查每个颜色区域，找到最佳匹配
-            // 对于B、C、D、E、F（背景相关颜色），使用更大的容差
-            let bestMatch = null;
-            let minDistance = Infinity;
+                    // 获取该像素在图层中的值
+                    const layerIndex = (y * width + x) * 4;
+                    const layerR = layerData.data[layerIndex];
+                    const layerG = layerData.data[layerIndex + 1];
+                    const layerB = layerData.data[layerIndex + 2];
+                    const layerA = layerData.data[layerIndex + 3];
 
-            for (const letter of ['A', 'B', 'C', 'D', 'E', 'F']) {
-                const transform = colorTransforms[letter];
-                const distance = this.colorDistance(pixelColor, transform.original);
-                
-                // A（字符颜色）使用标准容差，B-F（主体和色带颜色，包括背景）使用更大的容差
-                const currentTolerance = letter === 'A' ? tolerance : backgroundTolerance;
+                    // 判断该像素是否属于当前图层
+                    // 图层掩码格式可能有多种：
+                    // 1. 白色区域（RGB接近255）表示属于该颜色区域，黑色/透明区域表示不属于
+                    // 2. 黑色区域（RGB接近0）表示属于该颜色区域，白色/透明区域表示不属于
+                    // 3. 非透明区域（alpha > 0）表示属于该颜色区域，透明区域表示不属于
+                    // 
+                    // 采用最通用的策略：只要图层像素不透明（alpha>128），就认为属于该图层
+                    // 这样可以适配大多数图层掩码格式（白色表示区域或黑色表示区域都可以）
+                    const isInLayer = layerA > 128;
 
-                if (distance <= currentTolerance && distance < minDistance) {
-                    minDistance = distance;
-                    bestMatch = { letter, transform, distance };
+                    if (isInLayer) {
+                        matchedLayer = letter;
+                        break; // 找到第一个匹配的图层就停止
+                    }
                 }
-            }
 
-            // 如果找到匹配，应用变换
-            if (bestMatch) {
-                const { transform } = bestMatch;
-                const { original, new: newColor } = transform;
+                // 如果找到匹配的图层，直接应用新颜色
+                if (matchedLayer) {
+                    const transform = colorTransforms[matchedLayer];
+                    const { new: newColor } = transform;
 
-                // 计算像素相对于原始颜色的偏移量
-                const deltaR = r - original.r;
-                const deltaG = g - original.g;
-                const deltaB = b - original.b;
+                    // 直接应用新颜色，不进行任何偏移计算
+                    data[i] = newColor.r;
+                    data[i + 1] = newColor.g;
+                    data[i + 2] = newColor.b;
+                } else {
+                    // 检查背景图层（B, C, D, E, F）
+                    // 背景图层应该在主图层之后应用
+                    let matchedBgLayer = null;
+                    for (const letter of ['B', 'C', 'D', 'E', 'F']) {
+                        const bgLayerData = this.bgLayerImageData[letter];
+                        if (!bgLayerData) continue;
 
-                // 统一算法：保持颜色的相对关系
-                // 对于每个RGB通道，计算相对偏移比例，然后应用到新颜色
-                let newR, newG, newB;
+                        // 获取该像素在背景图层中的值
+                        const bgLayerIndex = (y * width + x) * 4;
+                        const bgLayerR = bgLayerData.data[bgLayerIndex];
+                        const bgLayerG = bgLayerData.data[bgLayerIndex + 1];
+                        const bgLayerB = bgLayerData.data[bgLayerIndex + 2];
+                        const bgLayerA = bgLayerData.data[bgLayerIndex + 3];
 
-                // 计算相对偏移比例（相对于原始颜色的变化比例）
-                // 例如：原始rgb(5,5,5)，像素rgb(5,5,6)，deltaB=1，ratioB=1/5=0.2
-                const ratioR = original.r !== 0 ? deltaR / original.r : (deltaR !== 0 ? deltaR / 1 : 0);
-                const ratioG = original.g !== 0 ? deltaG / original.g : (deltaG !== 0 ? deltaG / 1 : 0);
-                const ratioB = original.b !== 0 ? deltaB / original.b : (deltaB !== 0 ? deltaB / 1 : 0);
+                        // 判断该像素是否属于当前背景图层
+                        const isInBgLayer = bgLayerA > 128;
 
-                // 应用相同的相对比例到新颜色
-                // 例如：新颜色rgb(255,255,255)，ratioB=0.2，则newB=255*(1+0.2)=306->255
-                newR = Math.max(0, Math.min(255, newColor.r * (1 + ratioR)));
-                newG = Math.max(0, Math.min(255, newColor.g * (1 + ratioG)));
-                newB = Math.max(0, Math.min(255, newColor.b * (1 + ratioB)));
+                        if (isInBgLayer) {
+                            matchedBgLayer = letter;
+                            break; // 找到第一个匹配的背景图层就停止
+                        }
+                    }
 
-                data[i] = Math.round(newR);
-                data[i + 1] = Math.round(newG);
-                data[i + 2] = Math.round(newB);
+                    // 如果找到匹配的背景图层，应用背景颜色
+                    if (matchedBgLayer) {
+                        const bgTransform = bgColorTransforms[matchedBgLayer];
+                        const { new: bgColor } = bgTransform;
+
+                        // 直接应用背景颜色
+                        data[i] = bgColor.r;
+                        data[i + 1] = bgColor.g;
+                        data[i + 2] = bgColor.b;
+                    }
+                }
             }
         }
 
