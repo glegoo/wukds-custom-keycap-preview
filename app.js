@@ -531,26 +531,23 @@ class KeycapPreview {
     initSchemeManager() {
         const saveBtn = document.getElementById('saveSchemeBtn');
         const loadBtn = document.getElementById('loadSchemeBtn');
-        const nameInput = document.getElementById('schemeNameInput');
         const loadModal = document.getElementById('loadSchemeModal');
         const closeLoadModal = document.getElementById('closeLoadSchemeModal');
 
         // 保存方案
         saveBtn.addEventListener('click', () => {
-            const schemeName = nameInput.value.trim();
-            if (!schemeName) {
-                this.showToast('请输入方案名称', 'warning');
+            // 使用"年份 单词"作为方案名称
+            const year = this.textConfig.year || '';
+            const word = this.textConfig.word || '';
+            
+            if (!year && !word) {
+                this.showToast('请先输入年份和单词', 'warning');
                 return;
             }
+            
+            // 组合方案名称：年份 单词
+            const schemeName = word ? `${year} ${word}` : year;
             this.saveScheme(schemeName);
-            nameInput.value = '';
-        });
-
-        // 回车保存
-        nameInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                saveBtn.click();
-            }
         });
 
         // 打开加载方案弹窗
@@ -579,6 +576,7 @@ class KeycapPreview {
             name: name,
             colors: { ...this.currentColors },
             colorNumbers: { ...this.colorNumbers },
+            textConfig: { ...this.textConfig }, // 保存年份和单词
             createdAt: new Date().toISOString()
         };
 
@@ -621,11 +619,15 @@ class KeycapPreview {
 
         container.innerHTML = schemes.map((scheme, index) => {
             const date = new Date(scheme.createdAt).toLocaleString('zh-CN');
+            const year = scheme.textConfig && scheme.textConfig.year ? scheme.textConfig.year : '';
+            const word = scheme.textConfig && scheme.textConfig.word ? scheme.textConfig.word : '';
+            const yearWordInfo = (year || word) ? `<div class="scheme-meta">年份: ${year || '-'} | 单词: ${word || '-'}</div>` : '';
             return `
                 <div class="scheme-item">
                     <div class="scheme-info">
                         <div class="scheme-name">${this.escapeHtml(scheme.name)}</div>
                         <div class="scheme-meta">保存时间: ${date}</div>
+                        ${yearWordInfo}
                         <div class="scheme-colors">
                             ${['A', 'B', 'C', 'D', 'E', 'F'].map(letter => {
                                 const color = scheme.colors[letter];
@@ -663,6 +665,22 @@ class KeycapPreview {
                 this.colorNumbers[letter] = null;
             }
         });
+
+        // 恢复年份和单词
+        if (scheme.textConfig) {
+            this.textConfig.year = scheme.textConfig.year || '1970';
+            this.textConfig.word = scheme.textConfig.word || 'Music';
+            
+            // 更新输入框
+            const yearInput = document.getElementById('yearInputConfig');
+            const wordInput = document.getElementById('wordInputConfig');
+            if (yearInput) {
+                yearInput.value = this.textConfig.year;
+            }
+            if (wordInput) {
+                wordInput.value = this.textConfig.word;
+            }
+        }
 
         // 更新所有选项卡颜色
         this.updateAllTabColors();
@@ -869,6 +887,21 @@ class KeycapPreview {
             this.colorInputs[letter].value = originalColor;
             this.colorNumbers[letter] = null;
         });
+        
+        // 重置年份和单词为默认值
+        this.textConfig.year = '1970';
+        this.textConfig.word = 'Music';
+        
+        // 更新年份和单词输入框
+        const yearInput = document.getElementById('yearInputConfig');
+        const wordInput = document.getElementById('wordInputConfig');
+        if (yearInput) {
+            yearInput.value = this.textConfig.year;
+        }
+        if (wordInput) {
+            wordInput.value = this.textConfig.word;
+        }
+        
         // 更新所有选项卡颜色
         this.updateAllTabColors();
         this.updateCurrentColorDisplay();
