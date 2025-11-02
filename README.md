@@ -62,3 +62,46 @@ wukds-preview/
 
 支持所有现代浏览器（Chrome、Firefox、Safari、Edge）
 
+## 部署到 GitHub Pages
+
+### 方法一：使用 GitHub Actions（推荐）
+
+项目已配置 GitHub Actions 工作流，每次推送到 `main` 分支时会自动部署。
+
+**步骤：**
+
+1. 将代码推送到 GitHub 仓库：
+   ```bash
+   git add .
+   git commit -m "初始提交"
+   git push origin main
+   ```
+
+2. 在 GitHub 仓库中启用 Pages：
+   - 进入仓库的 **Settings** → **Pages**
+   - 在 **Source** 部分选择 **GitHub Actions**
+   - 保存设置
+
+3. 等待 Actions 完成部署（约 1-2 分钟）
+
+4. 访问你的网站：`https://你的用户名.github.io/仓库名/`
+
+### 方法二：手动设置（简单快速）
+
+1. 在 GitHub 仓库中：
+   - 进入 **Settings** → **Pages**
+   - 在 **Source** 部分选择 **Deploy from a branch**
+   - 选择分支：`main`
+   - 选择文件夹：`/ (root)`
+   - 点击 **Save**
+
+2. 等待几分钟，GitHub 会自动构建并部署
+
+3. 访问你的网站：`https://你的用户名.github.io/仓库名/`
+
+### 注意事项
+
+- 确保所有资源路径使用相对路径（项目中已正确配置）
+- 首次部署可能需要几分钟时间
+- 如果仓库是私有的，GitHub Pages 可能需要升级账户（或使用其他免费方案）
+
