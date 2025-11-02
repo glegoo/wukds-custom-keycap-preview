@@ -4,25 +4,16 @@ class KeycapPreview {
     constructor() {
         this.canvas = document.getElementById('previewCanvas');
         this.ctx = this.canvas.getContext('2d');
-        this.originalImageData = null;
         this.currentColors = { ...CONFIG.originalColors };
         this.colorInputs = {};
         this.updateTimer = null;
+        this.toastTimer = null;
         
         // 色卡相关
-        this.colorCardCanvases = {
-            card1: document.getElementById('colorCard1'),
-            card2: document.getElementById('colorCard2')
-        };
-        this.colorCardContexts = {
-            card1: this.colorCardCanvases.card1.getContext('2d'),
-            card2: this.colorCardCanvases.card2.getContext('2d')
-        };
-        this.colorCardImages = {
-            card1: null,
-            card2: null
-        };
-        this.currentSelectingLetter = null;
+        this.colorCardCanvas = document.getElementById('colorCardPlate');
+        this.colorCardContext = this.colorCardCanvas.getContext('2d');
+        this.colorCardImage = null;
+        this.currentSelectingLetter = 'A'; // 默认选中 A
         this.selectedColorInfo = {
             number: null,
             color: null
@@ -38,33 +29,10 @@ class KeycapPreview {
             F: null
         };
         
-        // 图层相关（用于精确颜色替换）
+        // 图层相关（图层叠加顺序：Frame -> A -> B -> C -> D -> E -> F）
         this.layerImages = {
+            Frame: null,
             A: null,
-            B: null,
-            C: null,
-            D: null,
-            E: null,
-            F: null
-        };
-        this.layerImageData = {
-            A: null,
-            B: null,
-            C: null,
-            D: null,
-            E: null,
-            F: null
-        };
-        
-        // 背景图层相关
-        this.bgLayerImages = {
-            B: null,
-            C: null,
-            D: null,
-            E: null,
-            F: null
-        };
-        this.bgLayerImageData = {
             B: null,
             C: null,
             D: null,
@@ -77,13 +45,18 @@ class KeycapPreview {
 
     // 初始化
     async init() {
-        // 初始化颜色输入框
+        // 初始化颜色输入框（内部存储）
         ['A', 'B', 'C', 'D', 'E', 'F'].forEach(letter => {
-            const input = document.getElementById(`color${letter}`);
-            this.colorInputs[letter] = input;
-            input.value = CONFIG.originalColors[letter];
-            input.addEventListener('input', () => this.onColorChange(letter));
+            this.colorInputs[letter] = document.createElement('input');
+            this.colorInputs[letter].type = 'color';
+            this.colorInputs[letter].value = CONFIG.originalColors[letter];
         });
+
+        // 初始化选项卡
+        this.initColorTabs();
+
+        // 初始化当前颜色输入框
+        this.initCurrentColorInput();
 
         // 初始化方案管理功能
         this.initSchemeManager();
@@ -99,204 +72,67 @@ class KeycapPreview {
         // 初始化备注生成功能
         this.initNoteGenerator();
 
-        // 加载图片
-        await this.loadImage();
-        
-        // 加载图层图片（必须在原始图片加载之后，需要知道Canvas尺寸）
+        // 加载图层图片（将设置Canvas尺寸）
         await this.loadLayers();
-        
-        // 加载背景图层图片
-        await this.loadBgLayers();
         
         // 加载色卡图片
         await this.loadColorCards();
     }
 
-    // 加载图片
-    async loadImage() {
+    // 加载图层图片
+    async loadLayers() {
         const loading = document.getElementById('loading');
         loading.classList.remove('hidden');
+        
+        try {
+            // 先加载 Frame 图层以确定 Canvas 尺寸
+            const frameImg = await this.loadSingleLayer('Frame');
+            
+            // 设置Canvas尺寸（保持原始尺寸或适当缩放）
+            const maxWidth = 1200;
+            const scale = Math.min(maxWidth / frameImg.width, 1);
+            this.canvas.width = frameImg.width * scale;
+            this.canvas.height = frameImg.height * scale;
 
+            // 加载其余图层（Frame已加载，跳过）
+            const loadPromises = ['A', 'B', 'C', 'D', 'E', 'F'].map(layerName => {
+                return this.loadSingleLayer(layerName);
+            });
+
+            await Promise.all(loadPromises);
+            console.log('所有图层加载完成');
+            
+            // 初始渲染
+            this.updatePreview();
+            
+            loading.classList.add('hidden');
+        } catch (error) {
+            console.error('图层加载错误:', error);
+            this.showToast('部分图层加载失败，请检查图层文件是否存在', 'error');
+            loading.classList.add('hidden');
+        }
+    }
+
+    // 加载单个图层
+    loadSingleLayer(layerName) {
         return new Promise((resolve, reject) => {
             const img = new Image();
             img.crossOrigin = 'anonymous';
             
             img.onload = () => {
-                // 设置Canvas尺寸
-                const maxWidth = 1200;
-                const scale = Math.min(maxWidth / img.width, 1);
-                this.canvas.width = img.width * scale;
-                this.canvas.height = img.height * scale;
-
-                // 绘制图片
-                this.ctx.drawImage(img, 0, 0, this.canvas.width, this.canvas.height);
-
-                // 保存原始图像数据
-                this.originalImageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
-
-                loading.classList.add('hidden');
-                resolve();
+                this.layerImages[layerName] = img;
+                resolve(img);
             };
-
-            img.onerror = () => {
-                loading.classList.add('hidden');
-                alert('图片加载失败，请检查图片路径是否正确');
-                reject(new Error('图片加载失败'));
-            };
-
-            img.src = CONFIG.imagePath;
-        });
-    }
-
-    // 加载图层图片
-    async loadLayers() {
-        if (!this.originalImageData) {
-            throw new Error('必须先加载原始图片');
-        }
-
-        const targetWidth = this.canvas.width;
-        const targetHeight = this.canvas.height;
-
-        // 创建临时Canvas用于处理图层
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = targetWidth;
-        tempCanvas.height = targetHeight;
-        const tempCtx = tempCanvas.getContext('2d');
-
-        // 加载所有图层
-        const loadPromises = ['A', 'B', 'C', 'D', 'E', 'F'].map(letter => {
-            return new Promise((resolve, reject) => {
-                const img = new Image();
-                img.crossOrigin = 'anonymous';
-                
-                img.onload = () => {
-                    // 清空临时Canvas
-                    tempCtx.clearRect(0, 0, targetWidth, targetHeight);
-                    
-                    // 将图层图片绘制到临时Canvas，缩放到目标尺寸
-                    tempCtx.drawImage(img, 0, 0, targetWidth, targetHeight);
-                    
-                    // 提取ImageData
-                    const imageData = tempCtx.getImageData(0, 0, targetWidth, targetHeight);
-                    
-                    // 存储图片和ImageData
-                    this.layerImages[letter] = img;
-                    this.layerImageData[letter] = imageData;
-                    
-                    resolve();
-                };
-                
-                img.onerror = () => {
-                    console.error(`图层 ${letter} 加载失败: ${CONFIG.layerPaths[letter]}`);
-                    reject(new Error(`图层 ${letter} 加载失败`));
-                };
-                
-                img.src = CONFIG.layerPaths[letter];
-            });
-        });
-
-        try {
-            await Promise.all(loadPromises);
-            console.log('所有图层加载完成');
             
-            // 调试：检查图层数据
-            ['A', 'B', 'C', 'D', 'E', 'F'].forEach(letter => {
-                const layerData = this.layerImageData[letter];
-                if (layerData) {
-                    const samplePixels = [];
-                    for (let i = 0; i < Math.min(100, layerData.data.length); i += 400) {
-                        const r = layerData.data[i];
-                        const g = layerData.data[i + 1];
-                        const b = layerData.data[i + 2];
-                        const a = layerData.data[i + 3];
-                        const brightness = (r + g + b) / 3;
-                        samplePixels.push({ r, g, b, a, brightness });
-                    }
-                    console.log(`图层 ${letter} 样本像素:`, samplePixels.slice(0, 5));
-                }
-            });
-        } catch (error) {
-            console.error('图层加载错误:', error);
-            alert('部分图层加载失败，请检查图层文件是否存在');
-        }
-    }
-
-    // 加载背景图层图片
-    async loadBgLayers() {
-        if (!this.originalImageData) {
-            throw new Error('必须先加载原始图片');
-        }
-
-        const targetWidth = this.canvas.width;
-        const targetHeight = this.canvas.height;
-
-        // 创建临时Canvas用于处理图层
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = targetWidth;
-        tempCanvas.height = targetHeight;
-        const tempCtx = tempCanvas.getContext('2d');
-
-        // 加载所有背景图层（B, C, D, E, F）
-        const loadPromises = ['B', 'C', 'D', 'E', 'F'].map(letter => {
-            return new Promise((resolve, reject) => {
-                const img = new Image();
-                img.crossOrigin = 'anonymous';
-                
-                img.onload = () => {
-                    // 清空临时Canvas
-                    tempCtx.clearRect(0, 0, targetWidth, targetHeight);
-                    
-                    // 将图层图片绘制到临时Canvas，缩放到目标尺寸
-                    tempCtx.drawImage(img, 0, 0, targetWidth, targetHeight);
-                    
-                    // 提取ImageData
-                    const imageData = tempCtx.getImageData(0, 0, targetWidth, targetHeight);
-                    
-                    // 存储图片和ImageData
-                    this.bgLayerImages[letter] = img;
-                    this.bgLayerImageData[letter] = imageData;
-                    
-                    resolve();
-                };
-                
-                img.onerror = () => {
-                    console.error(`背景图层 ${letter} 加载失败: ${CONFIG.bgLayerPaths[letter]}`);
-                    reject(new Error(`背景图层 ${letter} 加载失败`));
-                };
-                
-                img.src = CONFIG.bgLayerPaths[letter];
-            });
+            img.onerror = () => {
+                console.error(`图层 ${layerName} 加载失败: ${CONFIG.layerPaths[layerName]}`);
+                reject(new Error(`图层 ${layerName} 加载失败`));
+            };
+            
+            img.src = CONFIG.layerPaths[layerName];
         });
-
-        try {
-            await Promise.all(loadPromises);
-            console.log('所有背景图层加载完成');
-        } catch (error) {
-            console.error('背景图层加载错误:', error);
-            alert('部分背景图层加载失败，请检查图层文件是否存在');
-        }
     }
 
-    // 根据主颜色和亮度系数计算背景颜色
-    calculateBgColor(letter, mainColorHex) {
-        // 获取亮度系数（D、E、F使用C的系数）
-        let coefficients = CONFIG.brightnessCoefficients[letter];
-        if (!coefficients) {
-            // D、E、F使用C的系数
-            coefficients = CONFIG.brightnessCoefficients.C;
-        }
-
-        // 将主颜色转换为RGB
-        const mainRgb = this.hexToRgb(mainColorHex);
-
-        // 应用亮度系数计算背景颜色
-        const bgR = Math.round(mainRgb.r * coefficients.r);
-        const bgG = Math.round(mainRgb.g * coefficients.g);
-        const bgB = Math.round(mainRgb.b * coefficients.b);
-
-        // 转换回十六进制
-        return this.rgbToHex(bgR, bgG, bgB);
-    }
 
     // 颜色变化处理（防抖）
     onColorChange(letter) {
@@ -304,15 +140,18 @@ class KeycapPreview {
         const oldColor = this.currentColors[letter];
         this.currentColors[letter] = newColor;
         
+        // 更新选项卡颜色
+        this.updateTabColor(letter);
+        
         // 如果颜色改变了且不是从色卡选择的，清除编号
         // 因为手动调整颜色后，编号可能不再准确
         if (oldColor !== newColor && this.colorNumbers[letter] !== null) {
             // 检查新颜色是否与当前编号对应的颜色匹配
             // 如果不匹配，清除编号
             this.colorNumbers[letter] = null;
-            const numberElement = document.getElementById(`colorNumber${letter}`);
-            if (numberElement) {
-                numberElement.textContent = '';
+            // 如果当前显示的是这个字母，更新显示
+            if (letter === this.currentSelectingLetter) {
+                this.updateCurrentColorDisplay();
             }
         }
 
@@ -323,18 +162,12 @@ class KeycapPreview {
         }, 100);
     }
 
-    // 更新预览（基于图层掩码的精确替换）
+    // 更新预览（图层叠加，从底到顶：F -> E -> D -> C -> B -> A -> Frame）
     updatePreview() {
-        if (!this.originalImageData) return;
-
-        // 检查图层是否已加载
-        const layersReady = ['A', 'B', 'C', 'D', 'E', 'F'].every(letter => {
-            return this.layerImageData[letter] !== null;
-        });
-
-        // 检查背景图层是否已加载（B, C, D, E, F）
-        const bgLayersReady = ['B', 'C', 'D', 'E', 'F'].every(letter => {
-            return this.bgLayerImageData[letter] !== null;
+        // 检查所有图层是否已加载
+        const layerOrder = ['Frame', 'A', 'B', 'C', 'D', 'E', 'F'];
+        const layersReady = layerOrder.every(layerName => {
+            return this.layerImages[layerName] !== null;
         });
 
         if (!layersReady) {
@@ -342,144 +175,73 @@ class KeycapPreview {
             return;
         }
 
-        if (!bgLayersReady) {
-            console.warn('背景图层未完全加载，背景颜色可能无法正确显示');
-        }
+        // 清空Canvas
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-        // 创建新的ImageData副本
-        const imageData = new ImageData(
-            new Uint8ClampedArray(this.originalImageData.data),
-            this.originalImageData.width,
-            this.originalImageData.height
-        );
+        // 绘制智能背景（根据主题色B自动选择最佳背景方案）
+        const backgroundColorB = this.currentColors.B || CONFIG.originalColors.B;
+        this.drawSmartBackground(backgroundColorB);
 
-        const data = imageData.data;
-        const width = imageData.width;
-        const height = imageData.height;
+        // 创建临时Canvas用于处理图层颜色替换
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = this.canvas.width;
+        tempCanvas.height = this.canvas.height;
+        const tempCtx = tempCanvas.getContext('2d');
 
-        // 计算每个颜色区域的新颜色值
-        const colorTransforms = {};
-        ['A', 'B', 'C', 'D', 'E', 'F'].forEach(letter => {
-            const newHex = this.currentColors[letter];
-            const newRgb = this.hexToRgb(newHex);
-            
-            // 只存储新颜色的RGB值
-            colorTransforms[letter] = {
-                new: newRgb
-            };
-        });
+        // 按从底到顶的顺序绘制图层：F -> E -> D -> C -> B -> A -> Frame
+        const drawOrder = ['F', 'E', 'D', 'C', 'B', 'A', 'Frame'];
+        
+        for (const layerName of drawOrder) {
+            const layerImg = this.layerImages[layerName];
+            if (!layerImg) continue;
 
-        // 计算背景颜色（B, C, D, E, F有背景图层）
-        const bgColorTransforms = {};
-        ['B', 'C', 'D', 'E', 'F'].forEach(letter => {
-            const mainColorHex = this.currentColors[letter];
-            const bgColorHex = this.calculateBgColor(letter, mainColorHex);
-            const bgRgb = this.hexToRgb(bgColorHex);
-            
-            bgColorTransforms[letter] = {
-                new: bgRgb
-            };
-        });
+            // Frame 图层直接绘制，不做颜色替换
+            if (layerName === 'Frame') {
+                this.ctx.drawImage(layerImg, 0, 0, this.canvas.width, this.canvas.height);
+                continue;
+            }
 
-        // 遍历每个像素
-        for (let y = 0; y < height; y++) {
-            for (let x = 0; x < width; x++) {
-                const i = (y * width + x) * 4;
-                const r = data[i];
-                const g = data[i + 1];
-                const b = data[i + 2];
-                const a = data[i + 3];
-
-                // 跳过透明像素
-                if (a < 128) continue;
-
-                // 按优先级顺序检查图层（A -> B -> C -> D -> E -> F）
-                let matchedLayer = null;
-                for (const letter of ['A', 'B', 'C', 'D', 'E', 'F']) {
-                    const layerData = this.layerImageData[letter];
-                    if (!layerData) continue;
-
-                    // 获取该像素在图层中的值
-                    const layerIndex = (y * width + x) * 4;
-                    const layerR = layerData.data[layerIndex];
-                    const layerG = layerData.data[layerIndex + 1];
-                    const layerB = layerData.data[layerIndex + 2];
-                    const layerA = layerData.data[layerIndex + 3];
-
-                    // 判断该像素是否属于当前图层
-                    // 图层掩码格式可能有多种：
-                    // 1. 白色区域（RGB接近255）表示属于该颜色区域，黑色/透明区域表示不属于
-                    // 2. 黑色区域（RGB接近0）表示属于该颜色区域，白色/透明区域表示不属于
-                    // 3. 非透明区域（alpha > 0）表示属于该颜色区域，透明区域表示不属于
-                    // 
-                    // 采用最通用的策略：只要图层像素不透明（alpha>128），就认为属于该图层
-                    // 这样可以适配大多数图层掩码格式（白色表示区域或黑色表示区域都可以）
-                    const isInLayer = layerA > 128;
-
-                    if (isInLayer) {
-                        matchedLayer = letter;
-                        break; // 找到第一个匹配的图层就停止
+            // 颜色图层（A-F）：如果用户配置了颜色，需要替换非透明像素的颜色
+            const userColor = this.currentColors[layerName];
+            if (userColor) {
+                // 清空临时Canvas
+                tempCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
+                
+                // 绘制原始图层到临时Canvas
+                tempCtx.drawImage(layerImg, 0, 0, tempCanvas.width, tempCanvas.height);
+                
+                // 获取像素数据
+                const imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+                const data = imageData.data;
+                
+                // 将用户配置的颜色转换为RGB
+                const newRgb = this.hexToRgb(userColor);
+                
+                // 替换非透明像素的颜色
+                for (let i = 0; i < data.length; i += 4) {
+                    if (data[i + 3] > 0) { // 非透明像素
+                        data[i] = newRgb.r;     // R
+                        data[i + 1] = newRgb.g; // G
+                        data[i + 2] = newRgb.b; // B
+                        // alpha 保持不变
                     }
                 }
-
-                // 如果找到匹配的图层，直接应用新颜色
-                if (matchedLayer) {
-                    const transform = colorTransforms[matchedLayer];
-                    const { new: newColor } = transform;
-
-                    // 直接应用新颜色，不进行任何偏移计算
-                    data[i] = newColor.r;
-                    data[i + 1] = newColor.g;
-                    data[i + 2] = newColor.b;
-                } else {
-                    // 检查背景图层（B, C, D, E, F）
-                    // 背景图层应该在主图层之后应用
-                    let matchedBgLayer = null;
-                    for (const letter of ['B', 'C', 'D', 'E', 'F']) {
-                        const bgLayerData = this.bgLayerImageData[letter];
-                        if (!bgLayerData) continue;
-
-                        // 获取该像素在背景图层中的值
-                        const bgLayerIndex = (y * width + x) * 4;
-                        const bgLayerR = bgLayerData.data[bgLayerIndex];
-                        const bgLayerG = bgLayerData.data[bgLayerIndex + 1];
-                        const bgLayerB = bgLayerData.data[bgLayerIndex + 2];
-                        const bgLayerA = bgLayerData.data[bgLayerIndex + 3];
-
-                        // 判断该像素是否属于当前背景图层
-                        const isInBgLayer = bgLayerA > 128;
-
-                        if (isInBgLayer) {
-                            matchedBgLayer = letter;
-                            break; // 找到第一个匹配的背景图层就停止
-                        }
-                    }
-
-                    // 如果找到匹配的背景图层，应用背景颜色
-                    if (matchedBgLayer) {
-                        const bgTransform = bgColorTransforms[matchedBgLayer];
-                        const { new: bgColor } = bgTransform;
-
-                        // 直接应用背景颜色
-                        data[i] = bgColor.r;
-                        data[i + 1] = bgColor.g;
-                        data[i + 2] = bgColor.b;
-                    }
-                }
+                
+                // 将处理后的数据写回临时Canvas
+                tempCtx.putImageData(imageData, 0, 0);
+                
+                // 将处理后的图层绘制到主Canvas（使用 source-over 叠加模式）
+                this.ctx.drawImage(tempCanvas, 0, 0);
+            } else {
+                // 如果没有配置颜色，直接绘制原始图层
+                this.ctx.drawImage(layerImg, 0, 0, this.canvas.width, this.canvas.height);
             }
         }
 
-        // 将处理后的数据绘制到Canvas
-        this.ctx.putImageData(imageData, 0, 0);
+        // 在右下角绘制文字 "WUKDS"
+        this.drawWatermark();
     }
 
-    // 计算颜色距离（RGB空间欧氏距离）
-    colorDistance(color1, color2) {
-        const dr = color1.r - color2.r;
-        const dg = color1.g - color2.g;
-        const db = color1.b - color2.b;
-        return Math.sqrt(dr * dr + dg * dg + db * db);
-    }
 
     // 十六进制转RGB
     hexToRgb(hex) {
@@ -491,16 +253,245 @@ class KeycapPreview {
         } : { r: 0, g: 0, b: 0 };
     }
 
+    // 将颜色变暗（factor: 0-1，值越小越暗）
+    darkenColor(hex, factor = 0.7) {
+        const rgb = this.hexToRgb(hex);
+        const darkR = Math.max(0, Math.floor(rgb.r * factor));
+        const darkG = Math.max(0, Math.floor(rgb.g * factor));
+        const darkB = Math.max(0, Math.floor(rgb.b * factor));
+        return this.rgbToHex(darkR, darkG, darkB);
+    }
+
+    // 将颜色变亮（factor: >1，值越大越亮）
+    lightenColor(hex, factor = 1.3) {
+        const rgb = this.hexToRgb(hex);
+        const lightR = Math.min(255, Math.floor(rgb.r * factor));
+        const lightG = Math.min(255, Math.floor(rgb.g * factor));
+        const lightB = Math.min(255, Math.floor(rgb.b * factor));
+        return this.rgbToHex(lightR, lightG, lightB);
+    }
+
+    // 计算颜色亮度（0-255，值越大越亮）
+    getColorBrightness(hex) {
+        const rgb = this.hexToRgb(hex);
+        // 使用加权平均计算亮度（人眼对不同颜色的敏感度不同）
+        return (rgb.r * 0.299 + rgb.g * 0.587 + rgb.b * 0.114);
+    }
+
+    // RGB转HSL
+    rgbToHsl(r, g, b) {
+        r /= 255;
+        g /= 255;
+        b /= 255;
+        const max = Math.max(r, g, b);
+        const min = Math.min(r, g, b);
+        let h, s, l = (max + min) / 2;
+
+        if (max === min) {
+            h = s = 0;
+        } else {
+            const d = max - min;
+            s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+            switch (max) {
+                case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+                case g: h = ((b - r) / d + 2) / 6; break;
+                case b: h = ((r - g) / d + 4) / 6; break;
+            }
+        }
+        return { h: h * 360, s, l };
+    }
+
+    // HSL转RGB
+    hslToRgb(h, s, l) {
+        h /= 360;
+        let r, g, b;
+        if (s === 0) {
+            r = g = b = l;
+        } else {
+            const hue2rgb = (p, q, t) => {
+                if (t < 0) t += 1;
+                if (t > 1) t -= 1;
+                if (t < 1/6) return p + (q - p) * 6 * t;
+                if (t < 1/2) return q;
+                if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+                return p;
+            };
+            const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+            const p = 2 * l - q;
+            r = hue2rgb(p, q, h + 1/3);
+            g = hue2rgb(p, q, h);
+            b = hue2rgb(p, q, h - 1/3);
+        }
+        return {
+            r: Math.round(r * 255),
+            g: Math.round(g * 255),
+            b: Math.round(b * 255)
+        };
+    }
+
+    // 获取色相环上的互补色（更准确的算法）
+    getComplementaryColor(hex) {
+        const rgb = this.hexToRgb(hex);
+        const hsl = this.rgbToHsl(rgb.r, rgb.g, rgb.b);
+        // 色相旋转180度
+        const complementaryHue = (hsl.h + 180) % 360;
+        // 调整亮度和饱和度以确保对比度
+        const newSaturation = Math.min(0.4, hsl.s * 0.6); // 降低饱和度，更柔和
+        const newLightness = hsl.l < 0.3 ? 0.85 : 0.15; // 如果原色很暗，互补色要很亮；反之亦然
+        const complementaryRgb = this.hslToRgb(complementaryHue, newSaturation, newLightness);
+        return this.rgbToHex(complementaryRgb.r, complementaryRgb.g, complementaryRgb.b);
+    }
+
+    // 计算两个颜色的对比度（WCAG标准）
+    getContrastRatio(color1, color2) {
+        const getLuminance = (hex) => {
+            const rgb = this.hexToRgb(hex);
+            const [r, g, b] = [rgb.r, rgb.g, rgb.b].map(val => {
+                val = val / 255;
+                return val <= 0.03928 ? val / 12.92 : Math.pow((val + 0.055) / 1.055, 2.4);
+            });
+            return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+        };
+
+        const lum1 = getLuminance(color1);
+        const lum2 = getLuminance(color2);
+        const lighter = Math.max(lum1, lum2);
+        const darker = Math.min(lum1, lum2);
+        return (lighter + 0.05) / (darker + 0.05);
+    }
+
+    // 绘制智能背景（根据主题色自动选择最佳背景方案）
+    drawSmartBackground(themeColor) {
+        const brightness = this.getColorBrightness(themeColor);
+        let bgColor;
+        
+        if (brightness < 50) {
+            // 极暗色（接近黑色）：使用浅色背景
+            // 方案1：使用互补色的浅色版本
+            const complementary = this.getComplementaryColor(themeColor);
+            bgColor = this.lightenColor(complementary, 2.2);
+            
+            // 如果互补色还是太暗，使用浅灰色作为后备
+            const complementaryBrightness = this.getColorBrightness(bgColor);
+            if (complementaryBrightness < 180) {
+                bgColor = '#E8E8E8'; // 浅灰色
+            }
+        } else if (brightness < 120) {
+            // 中等偏暗：使用主题色变暗，但不要太暗
+            bgColor = this.darkenColor(themeColor, 0.55);
+            
+            // 确保背景色与主题色有足够对比度
+            const contrastRatio = this.getContrastRatio(themeColor, bgColor);
+            if (contrastRatio < 1.5) {
+                // 对比度不够，使用稍亮的背景
+                bgColor = this.darkenColor(themeColor, 0.65);
+            }
+        } else if (brightness < 200) {
+            // 中等亮度：使用主题色变暗
+            bgColor = this.darkenColor(themeColor, 0.5);
+        } else {
+            // 亮色：使用主题色变暗
+            bgColor = this.darkenColor(themeColor, 0.45);
+        }
+        
+        // 最终检查：确保背景色不会太暗或太亮
+        const bgBrightness = this.getColorBrightness(bgColor);
+        if (bgBrightness < 30) {
+            // 背景太暗，使用浅灰色
+            bgColor = '#E0E0E0';
+        } else if (bgBrightness > 240) {
+            // 背景太亮，稍微变暗
+            bgColor = this.darkenColor(bgColor, 0.9);
+        }
+        
+        // 绘制背景
+        this.ctx.fillStyle = bgColor;
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    }
+
+    // 在右下角绘制水印文字
+    drawWatermark() {
+        const text = 'WUKDS';
+        const padding = 20; // 距离边缘的间距
+        const fontSize = Math.max(36, this.canvas.width * 0.05); // 增大字体，根据canvas大小自适应
+        
+        // 设置文字样式
+        this.ctx.font = `bold ${fontSize}px Arial, sans-serif`;
+        this.ctx.textBaseline = 'bottom';
+        
+        // 颜色映射：W->C, U->D, K->E, D->F, S->A
+        const colorMap = {
+            'W': 'C',
+            'U': 'D',
+            'K': 'E',
+            'D': 'F',
+            'S': 'A'
+        };
+        
+        // 固定字母间距（使用字体大小的固定比例）
+        const letterSpacing = fontSize * 0.05; // 固定间距
+        
+        // 先计算所有字母的总宽度（包括间距）
+        let totalWidth = 0;
+        const letterWidths = [];
+        for (let i = 0; i < text.length; i++) {
+            const letter = text[i];
+            const width = this.ctx.measureText(letter).width;
+            letterWidths.push(width);
+            totalWidth += width;
+            // 除了最后一个字母，其他都要加上间距
+            if (i < text.length - 1) {
+                totalWidth += letterSpacing;
+            }
+        }
+        
+        // 计算起始位置（右下角，确保不超出范围）
+        const x = Math.max(padding, this.canvas.width - padding - totalWidth);
+        const y = this.canvas.height - padding;
+        
+        // 绘制文字阴影设置
+        this.ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+        this.ctx.shadowBlur = 4;
+        this.ctx.shadowOffsetX = 2;
+        this.ctx.shadowOffsetY = 2;
+        
+        // 从左到右逐个绘制每个字母，使用对应的颜色
+        let currentX = x;
+        for (let i = 0; i < text.length; i++) {
+            const letter = text[i];
+            const colorLetter = colorMap[letter];
+            const color = this.currentColors[colorLetter] || CONFIG.originalColors[colorLetter];
+            
+            // 设置当前字母的颜色
+            this.ctx.fillStyle = color;
+            
+            // 绘制字母
+            this.ctx.fillText(letter, currentX, y);
+            
+            // 移动到下一个字母的位置（向右移动，包括字母宽度和固定间距）
+            currentX += letterWidths[i] + letterSpacing;
+        }
+        
+        // 重置阴影
+        this.ctx.shadowColor = 'transparent';
+        this.ctx.shadowBlur = 0;
+        this.ctx.shadowOffsetX = 0;
+        this.ctx.shadowOffsetY = 0;
+    }
+
     // 初始化方案管理功能
     initSchemeManager() {
         const saveBtn = document.getElementById('saveSchemeBtn');
+        const loadBtn = document.getElementById('loadSchemeBtn');
         const nameInput = document.getElementById('schemeNameInput');
+        const loadModal = document.getElementById('loadSchemeModal');
+        const closeLoadModal = document.getElementById('closeLoadSchemeModal');
 
         // 保存方案
         saveBtn.addEventListener('click', () => {
             const schemeName = nameInput.value.trim();
             if (!schemeName) {
-                alert('请输入方案名称');
+                this.showToast('请输入方案名称', 'warning');
                 return;
             }
             this.saveScheme(schemeName);
@@ -514,7 +505,23 @@ class KeycapPreview {
             }
         });
 
-        // 加载已保存的方案列表
+        // 打开加载方案弹窗
+        loadBtn.addEventListener('click', () => {
+            this.openLoadSchemeModal();
+        });
+
+        // 关闭加载方案弹窗
+        const closeHandler = () => {
+            loadModal.classList.remove('show');
+        };
+        closeLoadModal.addEventListener('click', closeHandler);
+        loadModal.addEventListener('click', (e) => {
+            if (e.target === loadModal) {
+                closeHandler();
+            }
+        });
+
+        // 加载已保存的方案列表（弹窗中的列表）
         this.loadSavedSchemesList();
     }
 
@@ -534,10 +541,10 @@ class KeycapPreview {
         // 保存到localStorage
         localStorage.setItem('wukds_color_schemes', JSON.stringify(savedSchemes));
 
-        // 刷新方案列表
+        // 刷新方案列表（弹窗中的列表）
         this.loadSavedSchemesList();
 
-        alert(`方案 "${name}" 已保存！`);
+        this.showToast(`方案 "${name}" 已保存！`, 'success');
     }
 
     // 获取已保存的方案列表
@@ -546,9 +553,17 @@ class KeycapPreview {
         return stored ? JSON.parse(stored) : [];
     }
 
-    // 加载已保存的方案列表
+    // 打开加载方案弹窗
+    openLoadSchemeModal() {
+        const modal = document.getElementById('loadSchemeModal');
+        // 刷新方案列表
+        this.loadSavedSchemesList();
+        modal.classList.add('show');
+    }
+
+    // 加载已保存的方案列表（渲染到弹窗中）
     loadSavedSchemesList() {
-        const container = document.getElementById('savedSchemesList');
+        const container = document.getElementById('savedSchemesListModal');
         const schemes = this.getSavedSchemes();
 
         if (schemes.length === 0) {
@@ -572,19 +587,19 @@ class KeycapPreview {
                         </div>
                     </div>
                     <div class="scheme-actions">
-                        <button class="btn-load" onclick="keycapPreview.loadScheme(${index})">加载</button>
-                        <button class="btn-delete" onclick="keycapPreview.deleteScheme(${index})">删除</button>
+                        <button class="btn-load" onclick="keycapPreview.loadSchemeFromModal(${index})">加载</button>
+                        <button class="btn-delete" onclick="keycapPreview.deleteSchemeFromModal(${index})">删除</button>
                     </div>
                 </div>
             `;
         }).join('');
     }
 
-    // 加载方案
-    loadScheme(index) {
+    // 从弹窗加载方案
+    loadSchemeFromModal(index) {
         const schemes = this.getSavedSchemes();
         if (index < 0 || index >= schemes.length) {
-            alert('方案不存在');
+            this.showToast('方案不存在', 'error');
             return;
         }
 
@@ -596,38 +611,51 @@ class KeycapPreview {
             // 恢复颜色编号
             if (scheme.colorNumbers && scheme.colorNumbers[letter]) {
                 this.colorNumbers[letter] = scheme.colorNumbers[letter];
-                const numberElement = document.getElementById(`colorNumber${letter}`);
-                if (numberElement) {
-                    numberElement.textContent = `色号: ${scheme.colorNumbers[letter]}`;
-                }
             } else {
                 this.colorNumbers[letter] = null;
-                const numberElement = document.getElementById(`colorNumber${letter}`);
-                if (numberElement) {
-                    numberElement.textContent = '';
-                }
             }
         });
 
+        // 更新所有选项卡颜色
+        this.updateAllTabColors();
+        // 更新当前颜色显示
+        this.updateCurrentColorDisplay();
         this.updatePreview();
-        alert(`方案 "${scheme.name}" 已加载！`);
+        
+        // 关闭弹窗
+        const modal = document.getElementById('loadSchemeModal');
+        modal.classList.remove('show');
+        
+        this.showToast(`方案 "${scheme.name}" 已加载！`, 'success');
     }
 
-    // 删除方案
-    deleteScheme(index) {
+    // 加载方案（保留原有方法以兼容可能的其他调用）
+    loadScheme(index) {
+        this.loadSchemeFromModal(index);
+    }
+
+    // 从弹窗删除方案
+    deleteSchemeFromModal(index) {
         if (!confirm('确定要删除这个方案吗？')) {
             return;
         }
 
         const schemes = this.getSavedSchemes();
         if (index < 0 || index >= schemes.length) {
-            alert('方案不存在');
+            this.showToast('方案不存在', 'error');
             return;
         }
 
+        const schemeName = schemes[index].name;
         schemes.splice(index, 1);
         localStorage.setItem('wukds_color_schemes', JSON.stringify(schemes));
         this.loadSavedSchemesList();
+        this.showToast(`方案 "${schemeName}" 已删除`, 'success');
+    }
+
+    // 删除方案（保留原有方法以兼容可能的其他调用）
+    deleteScheme(index) {
+        this.deleteSchemeFromModal(index);
     }
 
     // HTML转义
@@ -637,6 +665,154 @@ class KeycapPreview {
         return div.innerHTML;
     }
 
+    // 显示 Toast 提示
+    showToast(message, type = 'info', duration = 3000) {
+        const toast = document.getElementById('toast');
+        if (!toast) return;
+
+        // 清除之前的定时器
+        if (this.toastTimer) {
+            clearTimeout(this.toastTimer);
+        }
+
+        // 移除之前的类型类
+        toast.classList.remove('success', 'error', 'warning', 'info');
+        // 添加新的类型类
+        toast.classList.add(type);
+        
+        // 设置消息内容
+        toast.textContent = message;
+        
+        // 显示 toast
+        toast.classList.remove('hide');
+        toast.classList.add('show');
+
+        // 自动隐藏
+        this.toastTimer = setTimeout(() => {
+            toast.classList.add('hide');
+            setTimeout(() => {
+                toast.classList.remove('show', 'hide');
+            }, 300);
+        }, duration);
+    }
+
+    // 初始化颜色选项卡
+    initColorTabs() {
+        const tabs = document.querySelectorAll('.color-tab');
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const letter = tab.getAttribute('data-letter');
+                this.switchColorTab(letter);
+            });
+        });
+        // 更新所有选项卡的颜色
+        this.updateAllTabColors();
+        // 默认选中 A
+        this.switchColorTab('A');
+    }
+
+    // 切换颜色选项卡
+    switchColorTab(letter) {
+        this.currentSelectingLetter = letter;
+        
+        // 更新选项卡状态
+        document.querySelectorAll('.color-tab').forEach(tab => {
+            if (tab.getAttribute('data-letter') === letter) {
+                tab.classList.add('active');
+            } else {
+                tab.classList.remove('active');
+            }
+        });
+        
+        // 更新当前颜色显示
+        this.updateCurrentColorDisplay();
+    }
+
+    // 更新所有选项卡的颜色显示
+    updateAllTabColors() {
+        ['A', 'B', 'C', 'D', 'E', 'F'].forEach(letter => {
+            this.updateTabColor(letter);
+        });
+    }
+
+    // 更新单个选项卡的颜色显示
+    updateTabColor(letter) {
+        const tab = document.querySelector(`.color-tab[data-letter="${letter}"]`);
+        if (!tab) return;
+
+        const color = this.currentColors[letter] || CONFIG.originalColors[letter];
+        
+        // 设置背景颜色
+        tab.style.backgroundColor = color;
+        
+        // 根据颜色亮度设置文字颜色
+        const brightness = this.getColorBrightness(color);
+        if (brightness < 128) {
+            tab.setAttribute('data-brightness', 'dark');
+        } else {
+            tab.setAttribute('data-brightness', 'light');
+        }
+    }
+
+    // 初始化当前颜色输入框
+    initCurrentColorInput() {
+        const colorInput = document.getElementById('currentColorInput');
+        const hexInput = document.getElementById('currentColorHex');
+        
+        // 颜色选择器变化
+        colorInput.addEventListener('input', () => {
+            const letter = this.currentSelectingLetter;
+            const newColor = colorInput.value;
+            this.currentColors[letter] = newColor;
+            this.colorInputs[letter].value = newColor;
+            hexInput.value = newColor.toUpperCase();
+            
+            // 更新选项卡颜色
+            this.updateTabColor(letter);
+            
+            // 清除编号（手动调整颜色后）
+            if (this.colorNumbers[letter] !== null) {
+                this.colorNumbers[letter] = null;
+                this.updateCurrentColorDisplay();
+            }
+            
+            // 更新预览
+            this.onColorChange(letter);
+        });
+        
+        // 初始显示
+        this.updateCurrentColorDisplay();
+    }
+
+    // 更新当前颜色显示
+    updateCurrentColorDisplay() {
+        const letter = this.currentSelectingLetter;
+        const color = this.currentColors[letter];
+        const colorNumber = this.colorNumbers[letter];
+        
+        // 更新标签
+        const label = document.getElementById('currentColorLabel');
+        const tab = document.querySelector(`[data-letter="${letter}"]`);
+        if (tab && label) {
+            const tabLabel = tab.getAttribute('data-label');
+            label.textContent = `${letter} - ${tabLabel}`;
+        }
+        
+        // 更新颜色编号
+        const numberElement = document.getElementById('currentColorNumber');
+        if (numberElement) {
+            numberElement.textContent = colorNumber ? `色号: ${colorNumber}` : '';
+        }
+        
+        // 更新颜色输入框
+        const colorInput = document.getElementById('currentColorInput');
+        const hexInput = document.getElementById('currentColorHex');
+        if (colorInput && hexInput) {
+            colorInput.value = color;
+            hexInput.value = color.toUpperCase();
+        }
+    }
+
     // 重置为原始配色
     resetColors() {
         ['A', 'B', 'C', 'D', 'E', 'F'].forEach(letter => {
@@ -644,120 +820,51 @@ class KeycapPreview {
             this.currentColors[letter] = originalColor;
             this.colorInputs[letter].value = originalColor;
             this.colorNumbers[letter] = null;
-            
-            const numberElement = document.getElementById(`colorNumber${letter}`);
-            if (numberElement) {
-                numberElement.textContent = '';
-            }
         });
+        // 更新所有选项卡颜色
+        this.updateAllTabColors();
+        this.updateCurrentColorDisplay();
         this.updatePreview();
     }
 
     // 初始化色卡选择器
     initColorCardPicker() {
-        const modal = document.getElementById('colorCardModal');
-        const closeModal = document.getElementById('closeModal');
-        const confirmBtn = document.getElementById('confirmColorBtn');
-
-        // 为每个颜色选择器添加色卡按钮事件
-        ['A', 'B', 'C', 'D', 'E', 'F'].forEach(letter => {
-            const btn = document.querySelector(`[data-letter="${letter}"]`);
-            if (btn) {
-                btn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    this.currentSelectingLetter = letter;
-                    modal.classList.add('show');
-                });
-            }
-        });
-
-        // 关闭模态框
-        const closeModalHandler = () => {
-            modal.classList.remove('show');
-            this.selectedColorInfo = { number: null, color: null };
-            const selectedInfo = document.getElementById('selectedColorInfo');
-            if (selectedInfo) {
-                selectedInfo.style.display = 'none';
-            }
-            // 重置键帽颜色为默认值
-            this.updateKeycapPreview('#8B1A1A');
-        };
-
-        closeModal.addEventListener('click', closeModalHandler);
-
-        // 点击模态框外部关闭
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                closeModalHandler();
-            }
-        });
-
-        // 确认选择
-        confirmBtn.addEventListener('click', () => {
-            if (this.selectedColorInfo.color && this.currentSelectingLetter) {
-                this.applyColorFromCard(this.currentSelectingLetter, this.selectedColorInfo.color, this.selectedColorInfo.number);
-                modal.classList.remove('show');
-                this.selectedColorInfo = { number: null, color: null };
-                const selectedInfo = document.getElementById('selectedColorInfo');
-                if (selectedInfo) {
-                    selectedInfo.style.display = 'none';
-                }
-                // 重置键帽颜色为默认值
-                this.updateKeycapPreview('#8B1A1A');
-            }
-        });
-
-        // 为两个色卡Canvas添加点击事件
-        this.colorCardCanvases.card1.addEventListener('click', (e) => this.handleColorCardClick(e, 'card1'));
-        this.colorCardCanvases.card2.addEventListener('click', (e) => this.handleColorCardClick(e, 'card2'));
+        // 为色卡Canvas添加点击事件
+        this.colorCardCanvas.addEventListener('click', (e) => this.handleColorCardClick(e));
     }
 
     // 加载色卡图片
     async loadColorCards() {
-        const loadCard = (cardKey, imagePath) => {
-            return new Promise((resolve, reject) => {
-                const img = new Image();
-                img.crossOrigin = 'anonymous';
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            
+            img.onload = () => {
+                // 设置Canvas尺寸，适应控制面板宽度（约350px，减去padding约310px）
+                const maxWidth = 310;
+                const scale = Math.min(maxWidth / img.width, 1);
+                this.colorCardCanvas.width = img.width * scale;
+                this.colorCardCanvas.height = img.height * scale;
                 
-                img.onload = () => {
-                    const canvas = this.colorCardCanvases[cardKey];
-                    const ctx = this.colorCardContexts[cardKey];
-                    
-                    // 设置Canvas尺寸，保持宽高比
-                    const maxWidth = 1000;
-                    const scale = Math.min(maxWidth / img.width, 1);
-                    canvas.width = img.width * scale;
-                    canvas.height = img.height * scale;
-                    
-                    // 绘制图片
-                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                    
-                    this.colorCardImages[cardKey] = img;
-                    resolve();
-                };
+                // 绘制图片
+                this.colorCardContext.drawImage(img, 0, 0, this.colorCardCanvas.width, this.colorCardCanvas.height);
                 
-                img.onerror = () => {
-                    console.error(`色卡 ${cardKey} 加载失败`);
-                    reject(new Error(`色卡 ${cardKey} 加载失败`));
-                };
-                
-                img.src = imagePath;
-            });
-        };
-
-        try {
-            await Promise.all([
-                loadCard('card1', CONFIG.colorCardPaths.card1),
-                loadCard('card2', CONFIG.colorCardPaths.card2)
-            ]);
-        } catch (error) {
-            console.error('色卡加载错误:', error);
-        }
+                this.colorCardImage = img;
+                resolve();
+            };
+            
+            img.onerror = () => {
+                console.error('色卡加载失败');
+                reject(new Error('色卡加载失败'));
+            };
+            
+            img.src = CONFIG.colorCardPaths.plate;
+        });
     }
 
     // 处理色卡点击事件
-    handleColorCardClick(event, cardKey) {
-        const canvas = this.colorCardCanvases[cardKey];
+    handleColorCardClick(event) {
+        const canvas = this.colorCardCanvas;
         const rect = canvas.getBoundingClientRect();
         const scaleX = canvas.width / rect.width;
         const scaleY = canvas.height / rect.height;
@@ -765,70 +872,74 @@ class KeycapPreview {
         const x = Math.floor((event.clientX - rect.left) * scaleX);
         const y = Math.floor((event.clientY - rect.top) * scaleY);
         
-        // 获取点击位置的颜色
-        const imageData = this.colorCardContexts[cardKey].getImageData(x, y, 1, 1);
-        const r = imageData.data[0];
-        const g = imageData.data[1];
-        const b = imageData.data[2];
-        
         // 计算颜色编号
-        const colorNumber = this.getColorNumberFromClick(x, y, cardKey);
+        const colorNumber = this.getColorNumberFromClick(x, y);
         
-        if (colorNumber) {
+        if (colorNumber && this.currentSelectingLetter) {
+            // 获取点击位置的颜色
+            const imageData = this.colorCardContext.getImageData(x, y, 1, 1);
+            const r = imageData.data[0];
+            const g = imageData.data[1];
+            const b = imageData.data[2];
             const colorHex = this.rgbToHex(r, g, b);
-            this.selectedColorInfo = {
-                number: colorNumber,
-                color: colorHex
-            };
             
-            // 更新键帽颜色预览
-            this.updateKeycapPreview(colorHex);
-            
-            // 显示选择信息
-            document.getElementById('selectedColorNumber').textContent = colorNumber;
-            document.getElementById('selectedColorHex').textContent = colorHex.toUpperCase();
-            document.getElementById('selectedColorInfo').style.display = 'flex';
+            // 立即应用颜色
+            this.applyColorFromCard(this.currentSelectingLetter, colorHex, colorNumber);
+        } else {
+            // 调试信息：如果无法获取编号，输出调试信息
+            console.log('点击位置:', { x, y, canvasWidth: canvas.width, canvasHeight: canvas.height });
         }
     }
 
     // 根据点击位置计算颜色编号
-    getColorNumberFromClick(x, y, cardKey) {
+    // 图片是15列12行的矩形方阵，共180个色号（1-180）
+    getColorNumberFromClick(x, y) {
         const layout = CONFIG.colorCardLayout;
-        const canvas = this.colorCardCanvases[cardKey];
+        const canvas = this.colorCardCanvas;
         
-        // 计算键帽的尺寸（需要考虑图片的实际布局）
-        // 假设色卡图片有一定的边距和间距
-        // 需要根据实际图片调整这些值
-        const paddingTop = canvas.height * 0.1;    // 顶部边距（标题区域）
-        const paddingBottom = canvas.height * 0.1;  // 底部边距（说明文字区域）
-        const paddingLeft = canvas.width * 0.05;   // 左侧边距
-        const paddingRight = canvas.width * 0.05;   // 右侧边距
+        // 15列12行的网格布局
+        // 直接从canvas尺寸计算每个单元格的尺寸（假设图片填满整个canvas）
+        const cellWidth = canvas.width / layout.cols;   // 每列的宽度
+        const cellHeight = canvas.height / layout.rows; // 每行的高度
         
-        const usableWidth = canvas.width - paddingLeft - paddingRight;
-        const usableHeight = canvas.height - paddingTop - paddingBottom;
+        // 计算点击位置所在的行和列（从0开始）
+        const col = Math.floor(x / cellWidth);
+        const row = Math.floor(y / cellHeight);
         
-        const keycapWidth = usableWidth / layout.cols;
-        const keycapHeight = usableHeight / layout.rows;
-        
-        // 计算点击位置所在的行和列
-        const col = Math.floor((x - paddingLeft) / keycapWidth);
-        const row = Math.floor((y - paddingTop) / keycapHeight);
+        // 调试信息
+        console.log('点击计算:', {
+            x, y,
+            canvasWidth: canvas.width,
+            canvasHeight: canvas.height,
+            cellWidth,
+            cellHeight,
+            col,
+            row,
+            layoutCols: layout.cols,
+            layoutRows: layout.rows
+        });
         
         // 检查是否在有效范围内
         if (col < 0 || col >= layout.cols || row < 0 || row >= layout.rows) {
+            console.log('超出范围:', { col, row, maxCol: layout.cols - 1, maxRow: layout.rows - 1 });
             return null;
         }
         
-        // 计算颜色编号
-        let colorNumber;
-        if (cardKey === 'card1') {
-            colorNumber = layout.card1Start + row * layout.cols + col;
-            if (colorNumber > layout.card1End) return null;
-        } else {
-            colorNumber = layout.card2Start + row * layout.cols + col;
-            if (colorNumber > layout.card2End) return null;
+        // 计算颜色编号（从1开始，从左到右、从上到下）
+        // 公式：编号 = 1 + 行号 * 列数 + 列号
+        // 例如：第1行第1列 = 1 + 0*15 + 0 = 1
+        //      第1行第15列 = 1 + 0*15 + 14 = 15
+        //      第2行第1列 = 1 + 1*15 + 0 = 16
+        //      第12行第15列 = 1 + 11*15 + 14 = 180
+        const colorNumber = layout.start + row * layout.cols + col;
+        
+        // 检查编号是否在有效范围内
+        if (colorNumber < layout.start || colorNumber > layout.end) {
+            console.log('编号超出范围:', { colorNumber, start: layout.start, end: layout.end });
+            return null;
         }
         
+        console.log('成功计算编号:', colorNumber);
         return colorNumber;
     }
 
@@ -874,10 +985,12 @@ class KeycapPreview {
         this.colorInputs[letter].value = colorHex;
         this.colorNumbers[letter] = colorNumber; // 保存编号
         
-        // 显示颜色编号
-        const numberElement = document.getElementById(`colorNumber${letter}`);
-        if (numberElement) {
-            numberElement.textContent = `色号: ${colorNumber}`;
+        // 更新选项卡颜色
+        this.updateTabColor(letter);
+        
+        // 如果当前显示的是这个字母，更新显示
+        if (letter === this.currentSelectingLetter) {
+            this.updateCurrentColorDisplay();
         }
         
         // 更新预览
@@ -899,7 +1012,7 @@ class KeycapPreview {
                 URL.revokeObjectURL(url);
             }, 'image/png');
         } catch (error) {
-            alert('导出失败，请重试');
+            this.showToast('导出失败，请重试', 'error');
             console.error('导出错误:', error);
         }
     }
@@ -979,13 +1092,13 @@ class KeycapPreview {
 
         // 验证年份
         if (!year || year.length !== 4) {
-            alert('请输入4位数字年份');
+            this.showToast('请输入4位数字年份', 'warning');
             return;
         }
 
         // 验证单词
         if (!word || word.length === 0) {
-            alert('请输入英文单词');
+            this.showToast('请输入英文单词', 'warning');
             return;
         }
 
@@ -998,7 +1111,7 @@ class KeycapPreview {
         });
 
         if (missingColors.length > 0) {
-            alert(`请先为以下颜色选择色卡编号：${missingColors.join(', ')}`);
+            this.showToast(`请先为以下颜色选择色卡编号：${missingColors.join(', ')}`, 'warning');
             return;
         }
 
@@ -1025,18 +1138,18 @@ class KeycapPreview {
         const noteText = document.getElementById('noteText');
         
         if (!noteText.value) {
-            alert('请先生成备注');
+            this.showToast('请先生成备注', 'warning');
             return;
         }
 
         try {
             await navigator.clipboard.writeText(noteText.value);
-            alert('备注已复制到剪贴板！');
+            this.showToast('备注已复制到剪贴板！', 'success');
         } catch (error) {
             // 降级方案：使用传统方法
             noteText.select();
             document.execCommand('copy');
-            alert('备注已复制到剪贴板！');
+            this.showToast('备注已复制到剪贴板！', 'success');
         }
     }
 }
@@ -1046,4 +1159,5 @@ let keycapPreview;
 document.addEventListener('DOMContentLoaded', () => {
     keycapPreview = new KeycapPreview();
 });
+
 

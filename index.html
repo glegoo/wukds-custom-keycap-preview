@@ -19,106 +19,65 @@
           <section class="color-controls">
             <h2>颜色自定义</h2>
 
-            <div class="color-group">
-              <label for="colorA">
-                <span class="color-label">A - 字符颜色</span>
-                <div class="color-input-wrapper">
-                  <input type="color" id="colorA" value="#FFFFFF" />
-                  <button
-                    class="color-card-btn"
-                    data-letter="A"
-                    title="从色卡选择"
-                  >
-                    色卡
-                  </button>
-                </div>
-                <span class="color-number" id="colorNumberA"></span>
-              </label>
+            <!-- Tips 图片 -->
+            <div class="tips-image-container">
+              <img
+                src="assets/tips.png"
+                alt="颜色对应说明"
+                class="tips-image"
+              />
             </div>
 
-            <div class="color-group">
-              <label for="colorB">
-                <span class="color-label">B - 主体颜色</span>
-                <div class="color-input-wrapper">
-                  <input type="color" id="colorB" value="#8B1A1A" />
-                  <button
-                    class="color-card-btn"
-                    data-letter="B"
-                    title="从色卡选择"
-                  >
-                    色卡
-                  </button>
-                </div>
-                <span class="color-number" id="colorNumberB"></span>
-              </label>
+            <!-- 颜色选项卡 -->
+            <div class="color-tabs">
+              <button
+                class="color-tab active"
+                data-letter="A"
+                data-label="字符颜色"
+              >
+                A
+              </button>
+              <button class="color-tab" data-letter="B" data-label="主体颜色">
+                B
+              </button>
+              <button class="color-tab" data-letter="C" data-label="色带颜色一">
+                C
+              </button>
+              <button class="color-tab" data-letter="D" data-label="色带颜色二">
+                D
+              </button>
+              <button class="color-tab" data-letter="E" data-label="色带颜色三">
+                E
+              </button>
+              <button class="color-tab" data-letter="F" data-label="色带颜色四">
+                F
+              </button>
             </div>
 
-            <div class="color-group">
-              <label for="colorC">
-                <span class="color-label">C - 色带颜色一</span>
-                <div class="color-input-wrapper">
-                  <input type="color" id="colorC" value="#FF8C42" />
-                  <button
-                    class="color-card-btn"
-                    data-letter="C"
-                    title="从色卡选择"
-                  >
-                    色卡
-                  </button>
-                </div>
-                <span class="color-number" id="colorNumberC"></span>
-              </label>
+            <!-- 当前选中颜色的信息 -->
+            <div class="current-color-info">
+              <div class="current-color-header">
+                <span class="current-color-label" id="currentColorLabel"
+                  >A - 字符颜色</span
+                >
+                <span class="color-number" id="currentColorNumber"></span>
+              </div>
+              <div class="color-input-wrapper">
+                <input type="color" id="currentColorInput" value="#FFFFFF" />
+                <input
+                  type="text"
+                  id="currentColorHex"
+                  value="#FFFFFF"
+                  class="color-hex-input"
+                  readonly
+                />
+              </div>
             </div>
 
-            <div class="color-group">
-              <label for="colorD">
-                <span class="color-label">D - 色带颜色二</span>
-                <div class="color-input-wrapper">
-                  <input type="color" id="colorD" value="#FFB884" />
-                  <button
-                    class="color-card-btn"
-                    data-letter="D"
-                    title="从色卡选择"
-                  >
-                    色卡
-                  </button>
-                </div>
-                <span class="color-number" id="colorNumberD"></span>
-              </label>
-            </div>
-
-            <div class="color-group">
-              <label for="colorE">
-                <span class="color-label">E - 色带颜色三</span>
-                <div class="color-input-wrapper">
-                  <input type="color" id="colorE" value="#FFCFA8" />
-                  <button
-                    class="color-card-btn"
-                    data-letter="E"
-                    title="从色卡选择"
-                  >
-                    色卡
-                  </button>
-                </div>
-                <span class="color-number" id="colorNumberE"></span>
-              </label>
-            </div>
-
-            <div class="color-group">
-              <label for="colorF">
-                <span class="color-label">F - 色带颜色四</span>
-                <div class="color-input-wrapper">
-                  <input type="color" id="colorF" value="#FFE4C8" />
-                  <button
-                    class="color-card-btn"
-                    data-letter="F"
-                    title="从色卡选择"
-                  >
-                    色卡
-                  </button>
-                </div>
-                <span class="color-number" id="colorNumberF"></span>
-              </label>
+            <!-- 色卡选择区域 -->
+            <div class="color-card-section">
+              <h3>可选色号: 1-180</h3>
+              <canvas id="colorCardPlate" class="color-card-canvas"></canvas>
             </div>
           </section>
         </aside>
@@ -132,7 +91,6 @@
             </div>
             <canvas id="previewCanvas"></canvas>
           </div>
-          <p class="preview-hint">实时预览区域 - 180种颜色可选</p>
         </main>
 
         <!-- 右侧控制面板 -->
@@ -149,9 +107,9 @@
               <button id="saveSchemeBtn" class="btn btn-primary">
                 保存方案
               </button>
-            </div>
-            <div class="saved-schemes-list" id="savedSchemesList">
-              <!-- 已保存的方案列表将动态生成 -->
+              <button id="loadSchemeBtn" class="btn btn-secondary">
+                加载方案
+              </button>
             </div>
           </section>
 
@@ -160,29 +118,27 @@
               重置为原始配色
             </button>
             <button id="exportBtn" class="btn btn-primary">导出图片</button>
-            <button id="generateNoteBtn" class="btn btn-primary">生成备注</button>
+            <button id="generateNoteBtn" class="btn btn-primary">
+              生成备注
+            </button>
           </section>
         </aside>
       </div>
     </div>
 
-    <!-- 色卡选择模态框 -->
-    <div id="colorCardModal" class="modal">
-      <div class="modal-content">
-        <div class="modal-header">
+    <!-- 色卡选择侧边栏 -->
+    <div id="colorCardSidebar" class="color-card-sidebar">
+      <div class="sidebar-content">
+        <div class="sidebar-header">
           <h2>选择颜色</h2>
-          <button class="modal-close" id="closeModal">&times;</button>
+          <button class="sidebar-close" id="closeColorCardSidebar">
+            &times;
+          </button>
         </div>
-        <div class="modal-body">
-          <div class="color-card-container">
-            <div class="color-card-section">
-              <h3>可选色号: 1-90</h3>
-              <canvas id="colorCard1" class="color-card-canvas"></canvas>
-            </div>
-            <div class="color-card-section">
-              <h3>可选色号: 91-180</h3>
-              <canvas id="colorCard2" class="color-card-canvas"></canvas>
-            </div>
+        <div class="sidebar-body">
+          <div class="color-card-section">
+            <h3>可选色号: 1-180</h3>
+            <canvas id="colorCardPlate" class="color-card-canvas"></canvas>
           </div>
           <div
             class="selected-color-info"
@@ -224,10 +180,22 @@
                 >
                 <span class="color-hex" id="selectedColorHex">#000000</span>
               </div>
-              <button id="confirmColorBtn" class="btn btn-primary btn-sm">
-                确认
-              </button>
             </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 加载方案模态框 -->
+    <div id="loadSchemeModal" class="modal">
+      <div class="modal-content modal-small">
+        <div class="modal-header">
+          <h2>加载方案</h2>
+          <button class="modal-close" id="closeLoadSchemeModal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="saved-schemes-list-modal" id="savedSchemesListModal">
+            <!-- 已保存的方案列表将动态生成 -->
           </div>
         </div>
       </div>
@@ -307,11 +275,7 @@
             </svg>
             <span>github.com/glegoo</span>
           </a>
-          <a
-            href="mailto:24253674@qq.com"
-            class="footer-link"
-            title="邮箱"
-          >
+          <a href="mailto:24253674@qq.com" class="footer-link" title="邮箱">
             <svg
               width="20"
               height="20"
@@ -328,6 +292,9 @@
         </div>
       </div>
     </footer>
+
+    <!-- Toast 提示 -->
+    <div id="toast" class="toast"></div>
 
     <script src="config.js"></script>
     <script src="app.js"></script>
