@@ -13,11 +13,16 @@ class KeycapPreview {
         this.colorCardCanvas = document.getElementById('colorCardPlate');
         this.colorCardContext = this.colorCardCanvas.getContext('2d');
         this.colorCardImage = null;
+        this.colorCardMagnifier = document.getElementById('colorCardMagnifier');
         this.currentSelectingLetter = 'A'; // 默认选中 A
         this.selectedColorInfo = {
             number: null,
             color: null
         };
+        // 放大镜相关
+        this.magnifierVisible = false;
+        this.magnifierZoom = 2.5; // 放大倍数
+        this.magnifierHeight = 150; // 放大镜高度（像素）
         
         // 存储颜色编号（用于保存方案）
         this.colorNumbers = {
@@ -874,6 +879,11 @@ class KeycapPreview {
     initColorCardPicker() {
         // 为色卡Canvas添加点击事件
         this.colorCardCanvas.addEventListener('click', (e) => this.handleColorCardClick(e));
+        
+        // 添加鼠标移动事件（放大镜效果）
+        this.colorCardCanvas.addEventListener('mousemove', (e) => this.handleColorCardMouseMove(e));
+        this.colorCardCanvas.addEventListener('mouseenter', () => this.showMagnifier());
+        this.colorCardCanvas.addEventListener('mouseleave', () => this.hideMagnifier());
     }
 
     // 加载色卡图片
@@ -984,6 +994,115 @@ class KeycapPreview {
         
         console.log('成功计算编号:', colorNumber);
         return colorNumber;
+    }
+
+    // 显示放大镜
+    showMagnifier() {
+        if (this.colorCardMagnifier) {
+            this.magnifierVisible = true;
+            this.colorCardMagnifier.style.display = 'block';
+        }
+    }
+
+    // 隐藏放大镜
+    hideMagnifier() {
+        if (this.colorCardMagnifier) {
+            this.magnifierVisible = false;
+            this.colorCardMagnifier.style.display = 'none';
+        }
+    }
+
+    // 处理色卡鼠标移动事件（放大镜效果）
+    handleColorCardMouseMove(event) {
+        if (!this.magnifierVisible || !this.colorCardMagnifier || !this.colorCardImage) {
+            return;
+        }
+
+        const canvas = this.colorCardCanvas;
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        
+        // 计算鼠标在canvas上的坐标
+        const canvasX = (event.clientX - rect.left) * scaleX;
+        const canvasY = (event.clientY - rect.top) * scaleY;
+        
+        // 计算原始图片的坐标
+        const originalScaleX = this.colorCardImage.width / canvas.width;
+        const originalScaleY = this.colorCardImage.height / canvas.height;
+        const originalX = canvasX * originalScaleX;
+        const originalY = canvasY * originalScaleY;
+        
+        // 获取放大镜的宽度（与色卡同宽）
+        const magnifierWidth = rect.width;
+        
+        // 创建临时canvas用于放大
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = magnifierWidth;
+        tempCanvas.height = this.magnifierHeight;
+        const tempCtx = tempCanvas.getContext('2d');
+        
+        // 计算源区域大小（放大镜显示的区域）
+        const sourceHeight = this.magnifierHeight / this.magnifierZoom;
+        const sourceWidth = magnifierWidth / this.magnifierZoom;
+        
+        // 计算源区域的起始位置（以鼠标位置为中心）
+        let sourceX = originalX - sourceWidth / 2;
+        let sourceY = originalY - sourceHeight / 2;
+        
+        // 确保源区域不超出图片边界
+        sourceX = Math.max(0, Math.min(this.colorCardImage.width - sourceWidth, sourceX));
+        sourceY = Math.max(0, Math.min(this.colorCardImage.height - sourceHeight, sourceY));
+        
+        // 绘制放大后的区域（长方形）
+        tempCtx.drawImage(
+            this.colorCardImage,
+            sourceX, sourceY, sourceWidth, sourceHeight,
+            0, 0, magnifierWidth, this.magnifierHeight
+        );
+        
+        // 在放大镜中心绘制固定的十字线（帮助用户了解鼠标对应的位置）
+        const centerX = magnifierWidth / 2;
+        const centerY = this.magnifierHeight / 2;
+        tempCtx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+        tempCtx.lineWidth = 2;
+        tempCtx.beginPath();
+        // 垂直线
+        tempCtx.moveTo(centerX, 0);
+        tempCtx.lineTo(centerX, this.magnifierHeight);
+        // 水平线
+        tempCtx.moveTo(0, centerY);
+        tempCtx.lineTo(magnifierWidth, centerY);
+        tempCtx.stroke();
+        
+        // 更新放大镜内容（位置固定，不需要移动）
+        this.colorCardMagnifier.style.backgroundImage = `url(${tempCanvas.toDataURL()})`;
+        
+        // 获取当前鼠标位置的颜色信息
+        const imageData = this.colorCardContext.getImageData(
+            Math.floor(canvasX), 
+            Math.floor(canvasY), 
+            1, 
+            1
+        );
+        const r = imageData.data[0];
+        const g = imageData.data[1];
+        const b = imageData.data[2];
+        const colorHex = this.rgbToHex(r, g, b);
+        
+        // 计算颜色编号
+        const colorNumber = this.getColorNumberFromClick(Math.floor(canvasX), Math.floor(canvasY));
+        
+        // 更新放大镜中显示的颜色信息
+        const colorInfo = this.colorCardMagnifier.querySelector('.magnifier-color-info');
+        if (colorInfo) {
+            let infoText = colorHex.toUpperCase();
+            if (colorNumber) {
+                infoText = `色号 #${colorNumber} - ${infoText}`;
+            }
+            colorInfo.textContent = infoText;
+            colorInfo.style.backgroundColor = colorHex;
+        }
     }
 
     // RGB转十六进制
