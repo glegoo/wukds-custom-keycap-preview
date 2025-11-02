@@ -2,6 +2,8 @@
 
 这是一个用于预览和自定义 WUKDS 三周年活动键帽配色的网页工具。
 
+🌐 **在线预览**: [https://glegoo.github.io/wukds-custom-keycap-preview/](https://glegoo.github.io/wukds-custom-keycap-preview/)
+
 ## 功能特性
 
 - 🎨 **六色自定义**：支持自定义 A-F 六个颜色区域
