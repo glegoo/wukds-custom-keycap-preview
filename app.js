@@ -1361,7 +1361,7 @@ class KeycapPreview {
         const originalWord1X = 780;
         const originalWord1Y = 418;
         const originalWord2X = 470;
-        const originalWord2Y = 510;
+        const originalWord2Y = 515;
         
         // 根据Canvas缩放比例调整坐标
         const yearX = originalYearX * this.canvasScale;
