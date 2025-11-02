@@ -269,6 +269,9 @@ class KeycapPreview {
         
         // 绘制色卡号列表（竖列排列）
         this.drawColorNumbers();
+        
+        // 在坐标(80, 80)处绘制"年份 单词"
+        this.drawYearWord();
     }
 
 
@@ -444,8 +447,19 @@ class KeycapPreview {
         const padding = 20; // 距离边缘的间距
         const fontSize = Math.max(36, this.canvas.width * 0.05); // 增大字体，根据canvas大小自适应
         
+        // 检查字体是否可用
+        const stapelAvailable = this.fontsLoaded.stapel || 
+            document.fonts.check('20px "Stapel Narrow Extra Bold Italic"') ||
+            document.fonts.check('1em "Stapel Narrow Extra Bold Italic"');
+        
         // 设置文字样式
-        this.ctx.font = `bold ${fontSize}px Arial, sans-serif`;
+        if (stapelAvailable) {
+            this.ctx.font = `${fontSize}px "Stapel Narrow Extra Bold Italic"`;
+        } else {
+            // 如果字体未加载，使用默认字体
+            this.ctx.font = `bold ${fontSize}px Arial, sans-serif`;
+            console.warn('Stapel字体未加载，WUKDS水印使用默认字体');
+        }
         this.ctx.textBaseline = 'bottom';
         
         // 颜色映射：W->C, U->D, K->E, D->F, S->A
@@ -1306,6 +1320,57 @@ class KeycapPreview {
             
             this.ctx.fillText(text, x, y);
         });
+        
+        this.ctx.restore();
+    }
+    
+    // 在坐标(80, 80)处绘制"年份 单词"
+    drawYearWord() {
+        // 原始坐标（基于原始图片尺寸）
+        const originalX = 80;
+        const originalY = 80;
+        
+        // 根据Canvas缩放比例调整坐标
+        const x = originalX * this.canvasScale;
+        const y = originalY * this.canvasScale;
+        
+        // 根据Canvas缩放比例调整字号
+        const fontSize = 80 * this.canvasScale;
+        
+        // 获取年份和单词
+        const year = this.textConfig.year || '';
+        const word = this.textConfig.word || '';
+        
+        // 如果没有内容，不绘制
+        if (!year && !word) {
+            return;
+        }
+        
+        // 组合文本：年份 单词
+        const text = word ? `${year} ${word}` : year;
+        
+        // 检查字体是否可用
+        const stapelAvailable = this.fontsLoaded.stapel || 
+            document.fonts.check('20px "Stapel Narrow Extra Bold Italic"') ||
+            document.fonts.check('1em "Stapel Narrow Extra Bold Italic"');
+        
+        if (!stapelAvailable) {
+            console.warn('Stapel字体未加载，无法绘制年份单词');
+            return;
+        }
+        
+        // 设置文字样式
+        this.ctx.save();
+        this.ctx.globalCompositeOperation = 'source-over'; // 确保文字在最上层
+        this.ctx.font = `${fontSize}px "Stapel Narrow Extra Bold Italic"`;
+        // 使用A的配色（或者根据需求使用其他颜色）
+        const textColor = this.currentColors.F || CONFIG.originalColors.F;
+        this.ctx.fillStyle = textColor;
+        this.ctx.textBaseline = 'top';
+        this.ctx.textAlign = 'left';
+        
+        // 绘制文字
+        this.ctx.fillText(text, x, y);
         
         this.ctx.restore();
     }
