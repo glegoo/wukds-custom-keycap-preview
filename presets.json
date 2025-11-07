@@ -1,0 +1,382 @@
+{
+  "presets": [
+    {
+      "id": "preset-1945-victory",
+      "name": "1945 Victory",
+      "category": "历史事件",
+      "description": "二战胜利主题，深红色象征胜利和牺牲，暖色渐变体现从战争到和平的过渡",
+      "colors": {
+        "B": "#69352B",
+        "A": "#FBFBFB",
+        "C": "#F36E40",
+        "D": "#F99576",
+        "E": "#ECC1AF",
+        "F": "#F7EBD8"
+      },
+      "colorNumbers": {
+        "B": 99,
+        "A": 1,
+        "C": 81,
+        "D": 87,
+        "E": 130,
+        "F": 11
+      },
+      "textConfig": {
+        "year": "1945",
+        "word": "Victory",
+        "wordSpace": ""
+      }
+    },
+    {
+      "id": "preset-1969-apollo",
+      "name": "1969 Apollo",
+      "category": "科技突破",
+      "description": "人类登月主题，深蓝色象征太空和科技，蓝色系渐变体现从地球到月球的旅程",
+      "colors": {
+        "B": "#0F3F79",
+        "A": "#FBFBFB",
+        "C": "#1A98DF",
+        "D": "#4FD0F6",
+        "E": "#AFD5F7",
+        "F": "#E3EBEF"
+      },
+      "colorNumbers": {
+        "B": 118,
+        "A": 1,
+        "C": 175,
+        "D": 101,
+        "E": 157,
+        "F": 4
+      },
+      "textConfig": {
+        "year": "1969",
+        "word": "Apollo",
+        "wordSpace": "Moon"
+      }
+    },
+    {
+      "id": "preset-1976-apple",
+      "name": "1976 Apple",
+      "category": "品牌诞生",
+      "description": "Apple公司成立主题，深灰和银色体现简约和科技，灰色系渐变体现Apple的极简美学",
+      "colors": {
+        "B": "#3C312C",
+        "A": "#FBFBFB",
+        "C": "#848484",
+        "D": "#AD887C",
+        "E": "#DDC3C9",
+        "F": "#FBFBFB"
+      },
+      "colorNumbers": {
+        "B": 28,
+        "A": 1,
+        "C": 17,
+        "D": 93,
+        "E": 123,
+        "F": 1
+      },
+      "textConfig": {
+        "year": "1976",
+        "word": "Apple",
+        "wordSpace": "Think"
+      }
+    },
+    {
+      "id": "preset-1986-zelda",
+      "name": "1986 Zelda",
+      "category": "ACG角色",
+      "description": "塞尔达传说主题，深绿和金色体现冒险和宝藏，绿色到金色的渐变体现从森林到宝藏的视觉旅程",
+      "colors": {
+        "B": "#3C312C",
+        "A": "#FBFBFB",
+        "C": "#2C8D50",
+        "D": "#80986B",
+        "E": "#E9BD25",
+        "F": "#EBCF7C"
+      },
+      "colorNumbers": {
+        "B": 28,
+        "A": 1,
+        "C": 60,
+        "D": 74,
+        "E": 41,
+        "F": 42
+      },
+      "textConfig": {
+        "year": "1986",
+        "word": "Zelda",
+        "wordSpace": "Legend"
+      }
+    },
+    {
+      "id": "preset-1997-potter",
+      "name": "1997 Potter",
+      "category": "ACG角色",
+      "description": "哈利波特主题，深紫和金色体现魔法和神秘，紫色到金色的渐变体现从神秘到光芒的魔法之旅",
+      "colors": {
+        "B": "#463A85",
+        "A": "#FBFBFB",
+        "C": "#80986B",
+        "D": "#BC98D3",
+        "E": "#FF8FEA",
+        "F": "#E8E5EE"
+      },
+      "colorNumbers": {
+        "B": 110,
+        "A": 1,
+        "C": 74,
+        "D": 122,
+        "E": 142,
+        "F": 143
+      },
+      "textConfig": {
+        "year": "1997",
+        "word": "Potter",
+        "wordSpace": "Magic"
+      }
+    },
+    {
+      "id": "preset-1989-internet",
+      "name": "1989 Internet",
+      "category": "科技突破",
+      "description": "互联网诞生主题，深蓝和青色体现科技和连接，蓝色到青色的渐变体现网络世界的无限可能",
+      "colors": {
+        "B": "#2B3140",
+        "A": "#FBFBFB",
+        "C": "#1A98DF",
+        "D": "#38C5E6",
+        "E": "#74D0F4",
+        "F": "#95D2F7"
+      },
+      "colorNumbers": {
+        "B": 29,
+        "A": 1,
+        "C": 175,
+        "D": 174,
+        "E": 172,
+        "F": 159
+      },
+      "textConfig": {
+        "year": "1989",
+        "word": "Internet",
+        "wordSpace": "Web"
+      }
+    },
+    {
+      "id": "preset-1979-gundam",
+      "name": "1979 Gundam",
+      "category": "ACG角色",
+      "description": "机动战士高达主题，深蓝和红色体现机械和战斗，蓝色到红色的渐变体现高达的经典配色",
+      "colors": {
+        "B": "#0F3F79",
+        "A": "#FBFBFB",
+        "C": "#1A98DF",
+        "D": "#FF517E",
+        "E": "#8C91B4",
+        "F": "#E5C9D3"
+      },
+      "colorNumbers": {
+        "B": 118,
+        "A": 1,
+        "C": 175,
+        "D": 83,
+        "E": 163,
+        "F": 124
+      },
+      "textConfig": {
+        "year": "1979",
+        "word": "Gundam",
+        "wordSpace": "Mobile"
+      }
+    },
+    {
+      "id": "preset-2000-millennium",
+      "name": "2000 Millennium",
+      "category": "历史事件",
+      "description": "千禧年主题，深紫和金色体现庆祝和未来，紫色到金色的渐变体现新世纪的希望",
+      "colors": {
+        "B": "#463A85",
+        "A": "#FBFBFB",
+        "C": "#FF517E",
+        "D": "#BC98D3",
+        "E": "#FFBA2A",
+        "F": "#FFC955"
+      },
+      "colorNumbers": {
+        "B": 110,
+        "A": 1,
+        "C": 83,
+        "D": 122,
+        "E": 38,
+        "F": 40
+      },
+      "textConfig": {
+        "year": "2000",
+        "word": "Millennium",
+        "wordSpace": "Future"
+      }
+    },
+    {
+      "id": "preset-1962-spiderman",
+      "name": "1962 Spider-Man",
+      "category": "ACG角色",
+      "description": "蜘蛛侠主题，深红色象征英雄的勇气，红色到蓝色的渐变体现蜘蛛侠经典的红蓝配色",
+      "colors": {
+        "B": "#C62E42",
+        "A": "#FBFBFB",
+        "C": "#FF517E",
+        "D": "#FFB7AB",
+        "E": "#1A98DF",
+        "F": "#AFD5F7"
+      },
+      "colorNumbers": {
+        "B": 96,
+        "A": 1,
+        "C": 83,
+        "D": 84,
+        "E": 175,
+        "F": 157
+      },
+      "textConfig": {
+        "year": "1962",
+        "word": "Spider",
+        "wordSpace": "Man"
+      }
+    },
+    {
+      "id": "preset-1963-ironman",
+      "name": "1963 Iron Man",
+      "category": "ACG角色",
+      "description": "钢铁侠主题，深红色象征科技与力量，红色到金色的渐变体现钢铁侠战甲的经典配色",
+      "colors": {
+        "B": "#C62E42",
+        "A": "#FBFBFB",
+        "C": "#FF517E",
+        "D": "#FFB7AB",
+        "E": "#FFBA2A",
+        "F": "#FFC955"
+      },
+      "colorNumbers": {
+        "B": 96,
+        "A": 1,
+        "C": 83,
+        "D": 84,
+        "E": 38,
+        "F": 40
+      },
+      "textConfig": {
+        "year": "1963",
+        "word": "Iron",
+        "wordSpace": "Man"
+      }
+    },
+    {
+      "id": "preset-1941-captain",
+      "name": "1941 Captain",
+      "category": "ACG角色",
+      "description": "美国队长主题，深蓝色象征自由与正义，蓝色到红色的渐变体现美国国旗的经典配色",
+      "colors": {
+        "B": "#0F3F79",
+        "A": "#FBFBFB",
+        "C": "#1A98DF",
+        "D": "#4FD0F6",
+        "E": "#FF517E",
+        "F": "#FFB7AB"
+      },
+      "colorNumbers": {
+        "B": 118,
+        "A": 1,
+        "C": 175,
+        "D": 101,
+        "E": 83,
+        "F": 84
+      },
+      "textConfig": {
+        "year": "1941",
+        "word": "Captain",
+        "wordSpace": "America"
+      }
+    },
+    {
+      "id": "preset-1966-panther",
+      "name": "1966 Panther",
+      "category": "ACG角色",
+      "description": "黑豹主题，深黑色象征神秘与力量，黑色到紫色的渐变体现瓦坎达的科技与神秘感",
+      "colors": {
+        "B": "#101010",
+        "A": "#FBFBFB",
+        "C": "#463A85",
+        "D": "#BC98D3",
+        "E": "#A69AD6",
+        "F": "#E8E5EE"
+      },
+      "colorNumbers": {
+        "B": 30,
+        "A": 1,
+        "C": 110,
+        "D": 122,
+        "E": 121,
+        "F": 143
+      },
+      "textConfig": {
+        "year": "1966",
+        "word": "Panther",
+        "wordSpace": "Wakanda"
+      }
+    },
+    {
+      "id": "preset-1962-hulk",
+      "name": "1962 Hulk",
+      "category": "ACG角色",
+      "description": "绿巨人主题，深绿色象征力量与愤怒，绿色系渐变体现浩克的经典绿色皮肤",
+      "colors": {
+        "B": "#137E52",
+        "A": "#FBFBFB",
+        "C": "#2C8D50",
+        "D": "#20AC58",
+        "E": "#13C124",
+        "F": "#0EE60E"
+      },
+      "colorNumbers": {
+        "B": 63,
+        "A": 1,
+        "C": 60,
+        "D": 61,
+        "E": 59,
+        "F": 65
+      },
+      "textConfig": {
+        "year": "1962",
+        "word": "Hulk",
+        "wordSpace": "Smash"
+      }
+    },
+    {
+      "id": "preset-1963-thor",
+      "name": "1963 Thor",
+      "category": "ACG角色",
+      "description": "雷神主题，深蓝色象征天空与雷电，蓝色到金色的渐变体现雷神之锤的闪电与力量",
+      "colors": {
+        "B": "#0F3F79",
+        "A": "#FBFBFB",
+        "C": "#1A98DF",
+        "D": "#4FD0F6",
+        "E": "#FFBA2A",
+        "F": "#FFC955"
+      },
+      "colorNumbers": {
+        "B": 118,
+        "A": 1,
+        "C": 175,
+        "D": 101,
+        "E": 38,
+        "F": 40
+      },
+      "textConfig": {
+        "year": "1963",
+        "word": "Thor",
+        "wordSpace": "Thunder"
+      }
+    }
+  ]
+}

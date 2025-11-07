@@ -42,6 +42,9 @@ const CONFIG = {
     cols: 15,     // 15列
     start: 1,     // 起始编号
     end: 180      // 结束编号
-  }
+  },
+  
+  // 预设方案路径
+  presetsPath: 'presets.json'
 };
 
