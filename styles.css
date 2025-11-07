@@ -178,10 +178,41 @@ section h2 {
   font-size: 1em;
 }
 
-.color-number {
+.color-number-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.color-number-label {
   font-size: 0.85em;
   color: #8b1a1a;
   font-weight: 600;
+  white-space: nowrap;
+}
+
+.color-number-input {
+  width: 70px;
+  padding: 4px 8px;
+  border: 2px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.85em;
+  font-weight: 600;
+  color: #8b1a1a;
+  text-align: center;
+  font-family: 'Courier New', monospace;
+  transition: all 0.3s ease;
+}
+
+.color-number-input:focus {
+  outline: none;
+  border-color: #8b1a1a;
+  box-shadow: 0 0 0 2px rgba(139, 26, 26, 0.2);
+}
+
+.color-number-input::placeholder {
+  color: #999;
+  font-weight: normal;
 }
 
 .color-input-wrapper {

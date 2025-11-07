@@ -833,6 +833,7 @@ class KeycapPreview {
     initCurrentColorInput() {
         const colorInput = document.getElementById('currentColorInput');
         const hexInput = document.getElementById('currentColorHex');
+        const numberInput = document.getElementById('currentColorNumberInput');
         
         // 颜色选择器变化
         colorInput.addEventListener('input', () => {
@@ -855,8 +856,73 @@ class KeycapPreview {
             this.onColorChange(letter);
         });
         
+        // 色号输入框变化
+        if (numberInput) {
+            numberInput.addEventListener('input', (e) => {
+                const value = e.target.value.trim();
+                if (value === '') {
+                    // 如果输入为空，清除色号
+                    const letter = this.currentSelectingLetter;
+                    this.colorNumbers[letter] = null;
+                    return;
+                }
+            });
+            
+            // 当用户完成输入（失去焦点或按回车）时应用色号
+            numberInput.addEventListener('blur', () => {
+                this.applyColorNumberFromInput();
+            });
+            
+            numberInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    e.target.blur(); // 触发 blur 事件
+                }
+            });
+        }
+        
         // 初始显示
         this.updateCurrentColorDisplay();
+    }
+    
+    // 从输入框应用色号
+    applyColorNumberFromInput() {
+        const numberInput = document.getElementById('currentColorNumberInput');
+        if (!numberInput) return;
+        
+        const inputValue = numberInput.value.trim();
+        if (!inputValue) return;
+        
+        const colorNumber = parseInt(inputValue, 10);
+        
+        // 验证色号范围
+        if (isNaN(colorNumber) || colorNumber < 1 || colorNumber > 180) {
+            this.showToast('请输入1-180之间的色号', 'warning');
+            // 恢复之前的色号
+            const letter = this.currentSelectingLetter;
+            const currentNumber = this.colorNumbers[letter];
+            numberInput.value = currentNumber || '';
+            return;
+        }
+        
+        // 检查色卡颜色是否已加载
+        const colorCardColors = this.extractColorCardColors();
+        if (!colorCardColors) {
+            this.showToast('色卡未加载完成，请稍后再试', 'warning');
+            return;
+        }
+        
+        // 获取对应色号的颜色
+        const colorHex = colorCardColors[colorNumber];
+        if (!colorHex) {
+            this.showToast(`色号 ${colorNumber} 不存在`, 'error');
+            return;
+        }
+        
+        // 应用颜色到当前选中的字母
+        const letter = this.currentSelectingLetter;
+        this.applyColorFromCard(letter, colorHex, colorNumber);
+        
+        this.showToast(`已应用色号 ${colorNumber}`, 'success');
     }
 
     // 更新当前颜色显示
@@ -873,10 +939,10 @@ class KeycapPreview {
             label.textContent = `${letter} - ${tabLabel}`;
         }
         
-        // 更新颜色编号
-        const numberElement = document.getElementById('currentColorNumber');
-        if (numberElement) {
-            numberElement.textContent = colorNumber ? `色号: ${colorNumber}` : '';
+        // 更新颜色编号输入框
+        const numberInput = document.getElementById('currentColorNumberInput');
+        if (numberInput) {
+            numberInput.value = colorNumber || '';
         }
         
         // 更新颜色输入框

@@ -60,7 +60,17 @@
                 <span class="current-color-label" id="currentColorLabel"
                   >A - 字符颜色</span
                 >
-                <span class="color-number" id="currentColorNumber"></span>
+                <div class="color-number-input-wrapper">
+                  <label for="currentColorNumberInput" class="color-number-label">色号:</label>
+                  <input
+                    type="number"
+                    id="currentColorNumberInput"
+                    class="color-number-input"
+                    min="1"
+                    max="180"
+                    placeholder="1-180"
+                  />
+                </div>
               </div>
               <div class="color-input-wrapper">
                 <input type="color" id="currentColorInput" value="#FFFFFF" />
