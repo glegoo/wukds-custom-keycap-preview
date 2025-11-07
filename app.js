@@ -90,6 +90,9 @@ class KeycapPreview {
         // 初始化色卡选择器
         this.initColorCardPicker();
 
+        // 初始化颜色搜索功能
+        this.initColorSearch();
+
         // 初始化备注生成功能
         this.initNoteGenerator();
         
@@ -930,6 +933,173 @@ class KeycapPreview {
         this.colorCardCanvas.addEventListener('mouseleave', () => this.hideMagnifier());
     }
 
+    // 初始化颜色搜索功能
+    initColorSearch() {
+        const searchInput = document.getElementById('colorSearchInput');
+        if (!searchInput) return;
+
+        // 存储色卡中每个色号的颜色值（缓存）
+        this.colorCardColors = null;
+        
+        // 搜索防抖定时器
+        this.colorSearchTimer = null;
+
+        // 监听输入事件（添加防抖）
+        searchInput.addEventListener('input', (e) => {
+            const hexValue = e.target.value.trim();
+            
+            // 清除之前的定时器
+            if (this.colorSearchTimer) {
+                clearTimeout(this.colorSearchTimer);
+            }
+            
+            // 验证hex格式
+            if (this.isValidHexColor(hexValue)) {
+                // 延迟300ms后搜索，避免频繁触发
+                this.colorSearchTimer = setTimeout(() => {
+                    this.searchClosestColor(hexValue);
+                }, 300);
+            }
+        });
+
+        // 监听回车键（立即搜索）
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                // 清除防抖定时器
+                if (this.colorSearchTimer) {
+                    clearTimeout(this.colorSearchTimer);
+                }
+                
+                const hexValue = e.target.value.trim();
+                if (this.isValidHexColor(hexValue)) {
+                    this.searchClosestColor(hexValue);
+                } else {
+                    this.showToast('请输入正确的hex颜色值，如#ffffff', 'warning');
+                }
+            }
+        });
+    }
+
+    // 验证hex颜色格式
+    isValidHexColor(hex) {
+        // 支持 #ffffff 或 #fff 格式
+        const hexPattern = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
+        return hexPattern.test(hex);
+    }
+
+    // 标准化hex颜色（将#fff转换为#ffffff）
+    normalizeHexColor(hex) {
+        if (hex.length === 4) {
+            // #fff -> #ffffff
+            return '#' + hex[1] + hex[1] + hex[2] + hex[2] + hex[3] + hex[3];
+        }
+        return hex.toUpperCase();
+    }
+
+    // 从色卡中提取所有色号的颜色值（缓存）
+    extractColorCardColors() {
+        if (this.colorCardColors) {
+            return this.colorCardColors; // 返回缓存
+        }
+
+        if (!this.colorCardImage) {
+            console.warn('色卡图片未加载');
+            return null;
+        }
+
+        const layout = CONFIG.colorCardLayout;
+        const colors = {};
+        
+        // 创建临时canvas用于提取颜色
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = this.colorCardImage.width;
+        tempCanvas.height = this.colorCardImage.height;
+        const tempCtx = tempCanvas.getContext('2d');
+        tempCtx.drawImage(this.colorCardImage, 0, 0);
+
+        // 计算每个色号单元格的中心位置
+        const cellWidth = tempCanvas.width / layout.cols;
+        const cellHeight = tempCanvas.height / layout.rows;
+
+        // 遍历所有色号
+        for (let row = 0; row < layout.rows; row++) {
+            for (let col = 0; col < layout.cols; col++) {
+                const colorNumber = layout.start + row * layout.cols + col;
+                
+                // 获取单元格中心位置的颜色
+                const centerX = Math.floor(col * cellWidth + cellWidth / 2);
+                const centerY = Math.floor(row * cellHeight + cellHeight / 2);
+                
+                const imageData = tempCtx.getImageData(centerX, centerY, 1, 1);
+                const r = imageData.data[0];
+                const g = imageData.data[1];
+                const b = imageData.data[2];
+                const hex = this.rgbToHex(r, g, b);
+                
+                colors[colorNumber] = hex;
+            }
+        }
+
+        this.colorCardColors = colors; // 缓存结果
+        return colors;
+    }
+
+    // 计算两个颜色的欧几里得距离（RGB空间）
+    calculateColorDistance(color1Hex, color2Hex) {
+        const rgb1 = this.hexToRgb(color1Hex);
+        const rgb2 = this.hexToRgb(color2Hex);
+        
+        // 计算RGB空间的欧几里得距离
+        const deltaR = rgb1.r - rgb2.r;
+        const deltaG = rgb1.g - rgb2.g;
+        const deltaB = rgb1.b - rgb2.b;
+        
+        return Math.sqrt(deltaR * deltaR + deltaG * deltaG + deltaB * deltaB);
+    }
+
+    // 搜索最接近的色号
+    searchClosestColor(hexValue) {
+        // 标准化hex颜色
+        const normalizedHex = this.normalizeHexColor(hexValue);
+        
+        // 提取色卡中所有颜色
+        const colorCardColors = this.extractColorCardColors();
+        if (!colorCardColors) {
+            this.showToast('色卡未加载完成，请稍后再试', 'warning');
+            return;
+        }
+
+        // 查找最接近的颜色
+        let closestColorNumber = null;
+        let minDistance = Infinity;
+
+        for (const [colorNumber, colorHex] of Object.entries(colorCardColors)) {
+            const distance = this.calculateColorDistance(normalizedHex, colorHex);
+            if (distance < minDistance) {
+                minDistance = distance;
+                closestColorNumber = parseInt(colorNumber);
+            }
+        }
+
+        if (closestColorNumber !== null) {
+            const closestColorHex = colorCardColors[closestColorNumber];
+            
+            // 应用颜色到当前选中的字母
+            const letter = this.currentSelectingLetter;
+            this.applyColorFromCard(letter, closestColorHex, closestColorNumber);
+            
+            // 更新搜索框显示
+            const searchInput = document.getElementById('colorSearchInput');
+            if (searchInput) {
+                searchInput.value = normalizedHex;
+            }
+            
+            this.showToast(`找到最接近的色号：${closestColorNumber} (${closestColorHex})`, 'success');
+        } else {
+            this.showToast('未找到匹配的颜色', 'error');
+        }
+    }
+
     // 加载色卡图片
     async loadColorCards() {
         return new Promise((resolve, reject) => {
@@ -947,6 +1117,15 @@ class KeycapPreview {
                 this.colorCardContext.drawImage(img, 0, 0, this.colorCardCanvas.width, this.colorCardCanvas.height);
                 
                 this.colorCardImage = img;
+                
+                // 色卡加载完成后，预提取所有颜色值（用于搜索功能）
+                try {
+                    this.extractColorCardColors();
+                    console.log('色卡颜色提取完成，共', Object.keys(this.colorCardColors || {}).length, '个色号');
+                } catch (error) {
+                    console.warn('提取色卡颜色时出错:', error);
+                }
+                
                 resolve();
             };
             
