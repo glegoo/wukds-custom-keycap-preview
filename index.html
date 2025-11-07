@@ -61,7 +61,11 @@
                   >A - 字符颜色</span
                 >
                 <div class="color-number-input-wrapper">
-                  <label for="currentColorNumberInput" class="color-number-label">色号:</label>
+                  <label
+                    for="currentColorNumberInput"
+                    class="color-number-label"
+                    >色号</label
+                  >
                   <input
                     type="number"
                     id="currentColorNumberInput"
@@ -72,15 +76,24 @@
                   />
                 </div>
               </div>
-              <div class="color-input-wrapper">
-                <input type="color" id="currentColorInput" value="#FFFFFF" />
-                <input
-                  type="text"
-                  id="currentColorHex"
-                  value="#FFFFFF"
-                  class="color-hex-input"
-                  readonly
-                />
+              <div class="color-controls-grid">
+                <div class="color-picker-section">
+                  <input type="color" id="currentColorInput" value="#FFFFFF" />
+                  <div class="color-info-group">
+                    <label class="color-info-label">颜色值</label>
+                    <input
+                      type="text"
+                      id="currentColorHex"
+                      value="#FFFFFF"
+                      class="color-hex-input"
+                      readonly
+                    />
+                  </div>
+                </div>
+                <div class="photo-preview-section">
+                  <label class="photo-preview-label">实拍预览</label>
+                  <div id="photoPreview" class="photo-preview"></div>
+                </div>
               </div>
             </div>
 
@@ -91,18 +104,14 @@
                   type="text"
                   id="colorSearchInput"
                   class="color-search-input"
-                  placeholder="#ffffff"
+                  placeholder="输入颜色查找相近色号，如:#ffffff"
                   maxlength="7"
                 />
-                <p class="color-search-hint">
-                  请输入正确的颜色hex值查找最接近的色号，如#ffffff
-                </p>
               </div>
             </div>
 
             <!-- 色卡选择区域 -->
             <div class="color-card-section">
-              <h3>可选色号: 1-180</h3>
               <div class="color-card-wrapper">
                 <canvas id="colorCardPlate" class="color-card-canvas"></canvas>
                 <div id="colorCardMagnifier" class="color-card-magnifier">

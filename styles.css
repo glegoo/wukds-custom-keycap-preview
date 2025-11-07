@@ -159,7 +159,7 @@ section h2 {
 /* 当前颜色信息 */
 .current-color-info {
   background: white;
-  padding: 15px;
+  padding: 12px;
   border-radius: 8px;
   border: 2px solid #e0e0e0;
   margin-bottom: 20px;
@@ -170,12 +170,15 @@ section h2 {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #f0f0f0;
 }
 
 .current-color-label {
   font-weight: 600;
   color: #333;
-  font-size: 1em;
+  font-size: 0.95em;
+  letter-spacing: 0.3px;
 }
 
 .color-number-input-wrapper {
@@ -185,73 +188,162 @@ section h2 {
 }
 
 .color-number-label {
-  font-size: 0.85em;
-  color: #8b1a1a;
-  font-weight: 600;
+  font-size: 0.75em;
+  color: #666;
+  font-weight: 500;
   white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .color-number-input {
-  width: 70px;
+  width: 65px;
   padding: 4px 8px;
   border: 2px solid #ddd;
-  border-radius: 4px;
+  border-radius: 6px;
   font-size: 0.85em;
   font-weight: 600;
   color: #8b1a1a;
   text-align: center;
   font-family: 'Courier New', monospace;
   transition: all 0.3s ease;
+  background: #fafafa;
 }
 
 .color-number-input:focus {
   outline: none;
   border-color: #8b1a1a;
-  box-shadow: 0 0 0 2px rgba(139, 26, 26, 0.2);
+  background: white;
+  box-shadow: 0 0 0 3px rgba(139, 26, 26, 0.1);
 }
 
 .color-number-input::placeholder {
-  color: #999;
+  color: #bbb;
   font-weight: normal;
 }
 
-.color-input-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
+/* 颜色控制网格布局 */
+.color-controls-grid {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  align-items: start;
 }
 
-.color-input-wrapper input[type='color'] {
-  width: 60px;
-  height: 40px;
+.color-picker-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.color-picker-section input[type='color'] {
+  width: 100%;
+  height: 50px;
   border: 2px solid #ddd;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
   background: none;
   padding: 0;
-  flex-shrink: 0;
+  transition: all 0.3s ease;
+}
+
+.color-picker-section input[type='color']:hover {
+  border-color: #8b1a1a;
+  box-shadow: 0 2px 8px rgba(139, 26, 26, 0.15);
+}
+
+.color-picker-section input[type='color']::-webkit-color-swatch-wrapper {
+  padding: 0;
+  border-radius: 6px;
+}
+
+.color-picker-section input[type='color']::-webkit-color-swatch {
+  border: none;
+  border-radius: 6px;
+}
+
+.color-info-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.color-info-label {
+  font-size: 0.75em;
+  color: #666;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .color-hex-input {
-  flex: 1;
-  padding: 10px 12px;
+  width: 100%;
+  padding: 8px 12px;
   border: 2px solid #ddd;
   border-radius: 6px;
   font-family: 'Courier New', monospace;
   font-size: 0.9em;
-  color: #555;
+  color: #333;
   background: #f8f9fa;
   text-align: center;
+  transition: all 0.3s ease;
 }
 
-.color-input-wrapper input[type='color']::-webkit-color-swatch-wrapper {
-  padding: 0;
+.color-hex-input:focus {
+  outline: none;
+  border-color: #8b1a1a;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(139, 26, 26, 0.1);
 }
 
-.color-input-wrapper input[type='color']::-webkit-color-swatch {
-  border: none;
-  border-radius: 4px;
+/* 实拍预览区域 */
+.photo-preview-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+}
+
+.photo-preview-label {
+  font-size: 0.75em;
+  color: #666;
+  font-weight: 500;
+  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.photo-preview {
+  width: 70px;
+  height: 70px;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  background-size: auto;
+  background-repeat: no-repeat;
+  background-position: 0 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  background-color: #f8f9fa;
+  flex-shrink: 0;
+}
+
+.photo-preview:hover {
+  border-color: #8b1a1a;
+  box-shadow: 0 4px 12px rgba(139, 26, 26, 0.2);
+}
+
+.photo-preview::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border: 2px solid rgba(139, 26, 26, 0.3);
+  border-radius: 6px;
+  pointer-events: none;
 }
 
 /* 颜色搜索区域 */

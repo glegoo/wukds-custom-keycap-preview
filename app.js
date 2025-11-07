@@ -864,7 +864,14 @@ class KeycapPreview {
                     // 如果输入为空，清除色号
                     const letter = this.currentSelectingLetter;
                     this.colorNumbers[letter] = null;
+                    // 更新实拍预览
+                    this.updatePhotoPreview(null);
                     return;
+                }
+                // 实时更新实拍预览（即使色号还未应用）
+                const num = parseInt(value, 10);
+                if (!isNaN(num) && num >= 1 && num <= 180) {
+                    this.updatePhotoPreview(num);
                 }
             });
             
@@ -952,6 +959,76 @@ class KeycapPreview {
             colorInput.value = color;
             hexInput.value = color.toUpperCase();
         }
+        
+        // 更新实拍预览
+        this.updatePhotoPreview(colorNumber);
+    }
+    
+    // 更新实拍预览窗口
+    updatePhotoPreview(colorNumber) {
+        const photoPreview = document.getElementById('photoPreview');
+        if (!photoPreview) return;
+        
+        // 如果没有色号，隐藏预览或显示默认状态
+        if (!colorNumber || colorNumber < 1 || colorNumber > 180) {
+            photoPreview.style.backgroundImage = 'none';
+            photoPreview.style.backgroundPosition = '0 0';
+            return;
+        }
+        
+        // 确定使用哪个图片：1-90 用 palette-a.jpeg，91-180 用 palette-b.jpeg
+        // 新图片是原图的50%大小
+        let imagePath;
+        let adjustedNumber;
+        
+        if (colorNumber <= 90) {
+            imagePath = 'assets/palette-a.jpeg';
+            adjustedNumber = colorNumber;
+        } else {
+            imagePath = 'assets/palette-b.jpeg';
+            adjustedNumber = colorNumber - 90;
+        }
+        
+        // 根据左上角和右下角坐标计算有效区域（新图片是原图的50%大小）
+        // 原图左上角：(110, 170)，右下角：(1302, 1234)
+        // 新图左上角：(55, 85)，右下角：(651, 617)
+        const topLeftX = 55;
+        const topLeftY = 85;
+        const bottomRightX = 651;
+        const bottomRightY = 617;
+        
+        // 计算有效区域尺寸
+        const effectiveWidth = bottomRightX - topLeftX;  // 596
+        const effectiveHeight = bottomRightY - topLeftY; // 532
+        
+        // 10列9行布局
+        const cols = 10;
+        const rows = 9;
+        
+        // 计算每列和每行的间距
+        const colSpacing = effectiveWidth / cols;  // 59.6
+        const rowSpacing = effectiveHeight / rows; // 约59.11
+        
+        // 计算行列位置（从0开始）
+        const col = (adjustedNumber - 1) % cols;
+        const row = Math.floor((adjustedNumber - 1) / cols);
+        
+        // 计算键帽中心点坐标（在新图片中的坐标）
+        const centerX = topLeftX + (col + 0.5) * colSpacing;
+        const centerY = topLeftY + (row + 0.5) * rowSpacing;
+        
+        // 预览窗口大小是70x70，要以中心点为中心展示
+        // background-position需要设置为：-(centerX - 35, centerY - 35)
+        const previewSize = 70;
+        const halfPreviewSize = previewSize / 2; // 35
+        
+        // 计算background-position（负值，因为要向左上移动）
+        const bgX = -(centerX - halfPreviewSize);
+        const bgY = -(centerY - halfPreviewSize);
+        
+        // 设置背景图片和位置
+        photoPreview.style.backgroundImage = `url(${imagePath})`;
+        photoPreview.style.backgroundPosition = `${bgX}px ${bgY}px`;
     }
 
     // 重置为原始配色
@@ -1439,7 +1516,7 @@ class KeycapPreview {
         // 更新选项卡颜色
         this.updateTabColor(letter);
         
-        // 如果当前显示的是这个字母，更新显示
+        // 如果当前显示的是这个字母，更新显示（包括实拍预览）
         if (letter === this.currentSelectingLetter) {
             this.updateCurrentColorDisplay();
         }
