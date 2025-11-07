@@ -1432,10 +1432,10 @@ class KeycapPreview {
             });
         }
         
-        // 单词输入限制为字母
+        // 单词输入限制为字母和数字
         if (wordInput) {
             wordInput.addEventListener('input', (e) => {
-                e.target.value = e.target.value.replace(/[^A-Za-z]/g, '');
+                e.target.value = e.target.value.replace(/[^A-Za-z0-9]/g, '');
                 this.textConfig.word = e.target.value;
                 // 防抖更新预览
                 clearTimeout(this.updateTimer);
@@ -1808,9 +1808,9 @@ class KeycapPreview {
             e.target.value = e.target.value.replace(/[^0-9]/g, '');
         });
 
-        // 单词输入限制为字母
+        // 单词输入限制为字母和数字
         wordInput.addEventListener('input', (e) => {
-            e.target.value = e.target.value.replace(/[^A-Za-z]/g, '');
+            e.target.value = e.target.value.replace(/[^A-Za-z0-9]/g, '');
         });
 
         // 生成备注
