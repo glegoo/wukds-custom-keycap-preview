@@ -303,6 +303,12 @@ class KeycapPreview {
       }
     }
 
+    // 绘制文字阴影设置
+    this.ctx.shadowColor = 'rgba(0, 0, 0, 0.3)'
+    this.ctx.shadowBlur = 4
+    this.ctx.shadowOffsetX = 2
+    this.ctx.shadowOffsetY = 2
+
     // 在右下角绘制文字 "WUKDS"
     this.drawWatermark()
 
@@ -315,6 +321,12 @@ class KeycapPreview {
 
     // 在坐标(80, 80)处绘制"年份 单词"
     this.drawYearWord()
+
+    // 清除文字阴影设置
+    this.ctx.shadowColor = 'rgba(0, 0, 0, 0)'
+    this.ctx.shadowBlur = 0
+    this.ctx.shadowOffsetX = 0
+    this.ctx.shadowOffsetY = 0
   }
 
   // 十六进制转RGB
@@ -554,12 +566,6 @@ class KeycapPreview {
     // 计算起始位置（右下角，确保不超出范围）
     const x = Math.max(padding, this.canvas.width - padding - totalWidth)
     const y = this.canvas.height - padding
-
-    // 绘制文字阴影设置
-    this.ctx.shadowColor = 'rgba(0, 0, 0, 0.3)'
-    this.ctx.shadowBlur = 4
-    this.ctx.shadowOffsetX = 2
-    this.ctx.shadowOffsetY = 2
 
     // 从左到右逐个绘制每个字母，使用对应的颜色
     let currentX = x
@@ -1090,9 +1096,11 @@ class KeycapPreview {
           const category = tag.getAttribute('data-category') || ''
           this.selectedCategory = category
           // 更新所有tag的active状态
-          categoryFilter.querySelectorAll('.preset-category-tag').forEach((t) => {
-            t.classList.remove('active')
-          })
+          categoryFilter
+            .querySelectorAll('.preset-category-tag')
+            .forEach((t) => {
+              t.classList.remove('active')
+            })
           tag.classList.add('active')
           this.renderPresets()
         }
@@ -1131,7 +1139,8 @@ class KeycapPreview {
     const currentCategory = this.selectedCategory || ''
 
     // 清空现有tag（保留"全部"tag）
-    categoryFilter.innerHTML = '<button class="preset-category-tag" data-category="">全部</button>'
+    categoryFilter.innerHTML =
+      '<button class="preset-category-tag" data-category="">全部</button>'
 
     // 添加category tag
     categories.sort().forEach((category) => {
@@ -1143,7 +1152,9 @@ class KeycapPreview {
     })
 
     // 恢复之前选中的值
-    const activeTag = categoryFilter.querySelector(`[data-category="${currentCategory}"]`)
+    const activeTag = categoryFilter.querySelector(
+      `[data-category="${currentCategory}"]`
+    )
     if (activeTag) {
       categoryFilter.querySelectorAll('.preset-category-tag').forEach((t) => {
         t.classList.remove('active')
@@ -2407,7 +2418,8 @@ class KeycapPreview {
       // 如果有色卡号，显示 "A-xx"，否则显示 "A-"（色卡号为空）
       const text = colorNumber ? `${letter} - ${colorNumber}` : `${letter} -`
 
-      this.ctx.fillStyle = this.currentColors[letter] || CONFIG.originalColors[letter];
+      this.ctx.fillStyle =
+        this.currentColors[letter] || CONFIG.originalColors[letter]
 
       this.ctx.fillText(text, x, y)
     })
